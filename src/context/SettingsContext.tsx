@@ -5,7 +5,7 @@ import type { AppSettings } from '@/types/database';
 const DEFAULT_SETTINGS: AppSettings = {
   id: 1,
   org_name: 'Ornemer Raugeisthexen',
-  logo_url: '/assets/raugeisthexen-logo.svg',
+  logo_url: '/assets/raugeisthexen-logo.jpg',
   color_primary: '#111111',
   color_secondary: '#c81e1e',
   color_accent: '#1f8a3b',

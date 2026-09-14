@@ -11,7 +11,7 @@ create extension if not exists pgcrypto;
 create table app_settings (
   id smallint primary key default 1,
   org_name text not null default 'Ornemer Raugeisthexen',
-  logo_url text not null default '/assets/raugeisthexen-logo.svg',
+  logo_url text not null default '/assets/raugeisthexen-logo.jpg',
   color_primary text not null default '#111111',   -- Schwarz
   color_secondary text not null default '#c81e1e', -- Rot
   color_accent text not null default '#1f8a3b',    -- Grün

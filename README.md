@@ -324,11 +324,7 @@ Function injiziert und muss **nicht** manuell gesetzt werden. Er darf
 3. Seitenverhältnis wird automatisch beibehalten (`object-fit: contain`),
    das Logo wird nicht verzerrt oder abgeschnitten.
 
-> Hinweis: In diesem Repository liegt aktuell ein **Platzhalter-Logo**
-> (`public/assets/raugeisthexen-logo.svg`), da die Bilddatei des Vereinslogos
-> nicht automatisiert aus dem Chat in das Projektverzeichnis übernommen
-> werden konnte. Bitte die bereitgestellte Grafikdatei des Vereins vor dem
-> Produktivbetrieb wie oben beschrieben einsetzen.
+Das echte Vereinslogo liegt unter `public/assets/raugeisthexen-logo.jpg`.
 
 ## Farben ändern
 

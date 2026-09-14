@@ -18,7 +18,7 @@ insert into app_settings (id, org_name, logo_url, color_primary, color_secondary
 values (
   1,
   'Ornemer Raugeisthexen',
-  '/assets/raugeisthexen-logo.svg',
+  '/assets/raugeisthexen-logo.jpg',
   '#111111',
   '#c81e1e',
   '#1f8a3b',
