@@ -17,6 +17,7 @@ import {
 } from '@/services/admin';
 import type { EventRow, EventDayRow, BoardMemberRow, ShiftRow } from '@/types/database';
 import { computeOccupancy } from '@/utils/capacity';
+import { getShiftLeaderDisplay } from '@/utils/leader';
 import { computeOverlap, formatDateLong, formatTimeRange } from '@/utils/time';
 import { friendlyErrorMessage } from '@/utils/errors';
 import LoadingScreen from '@/components/LoadingScreen';
@@ -186,7 +187,7 @@ export default function AdminShifts() {
                 const overlap = next ? computeOverlap(shift, next) : null;
                 const activeRegs = shift.registrations.filter((r: any) => r.status === 'active');
                 const waitlistRegs = shift.registrations.filter((r: any) => r.status === 'waitlist');
-                const primary = shift.leaders.find((l: any) => l.is_primary);
+                const leader = getShiftLeaderDisplay(shift, shift.leaders);
                 const others = shift.leaders.filter((l: any) => !l.is_primary);
 
                 return (
@@ -201,12 +202,10 @@ export default function AdminShifts() {
                       </div>
 
                       <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-gray-600">
-                        {primary && (
+                        {leader.name && (
                           <p>
-                            Schichtchef:{' '}
-                            <strong>
-                              {primary.board_member.first_name} {primary.board_member.last_name}
-                            </strong>
+                            Schichtchef: <strong>{leader.name}</strong>
+                            {leader.phone && ` · ${leader.phone}`}
                           </p>
                         )}
                         {others.map((l: any) => (

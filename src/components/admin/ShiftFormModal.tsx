@@ -33,6 +33,8 @@ export default function ShiftFormModal({
   const [status, setStatus] = useState<ShiftRow['status']>(initial?.status ?? 'open');
   const [manuallyLocked, setManuallyLocked] = useState(initial?.manually_locked ?? false);
   const [leaderCounts, setLeaderCounts] = useState(initial?.leader_counts_as_helper ?? false);
+  const [leaderName, setLeaderName] = useState(initial?.leader_name ?? '');
+  const [leaderPhone, setLeaderPhone] = useState(initial?.leader_phone ?? '');
   const [notes, setNotes] = useState(initial?.notes ?? '');
   const [leaderIds, setLeaderIds] = useState<Set<string>>(
     new Set(initial?.leaders?.map((l) => l.board_member_id) ?? [])
@@ -79,6 +81,8 @@ export default function ShiftFormModal({
           status,
           manually_locked: manuallyLocked,
           leader_counts_as_helper: leaderCounts,
+          leader_name: leaderName.trim() || null,
+          leader_phone: leaderPhone.trim() || null,
           notes: notes.trim() || null,
           display_order: initial?.display_order ?? 0,
         },
@@ -193,40 +197,72 @@ export default function ShiftFormModal({
         </div>
 
         <div className="mt-4">
-          <p className="mb-2 text-sm font-medium">Schichtchef / weitere Verantwortliche</p>
-          <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3">
-            {boardMembers.length === 0 && (
-              <p className="text-sm text-gray-500">
-                Noch keine Vorstandsmitglieder hinterlegt (siehe Bereich „Vorstand“).
-              </p>
-            )}
-            {boardMembers.map((bm) => (
-              <div key={bm.id} className="flex items-center justify-between gap-2">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={leaderIds.has(bm.id)}
-                    onChange={() => toggleLeader(bm.id)}
-                  />
-                  <span>
-                    {bm.first_name} {bm.last_name}
-                    {bm.position && <span className="text-gray-500"> ({bm.position})</span>}
-                  </span>
-                </label>
-                {leaderIds.has(bm.id) && (
-                  <label className="flex items-center gap-1 text-xs text-gray-500">
-                    <input
-                      type="radio"
-                      name="primary-leader"
-                      checked={primaryId === bm.id}
-                      onChange={() => setPrimaryId(bm.id)}
-                    />
-                    Hauptverantwortlicher
-                  </label>
-                )}
-              </div>
-            ))}
+          <p className="mb-2 text-sm font-medium">Schichtchef</p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-medium">Name</span>
+              <input
+                className="rounded-lg border border-gray-300 px-3 py-2"
+                value={leaderName}
+                onChange={(e) => setLeaderName(e.target.value)}
+                placeholder="z.B. Max Mustermann"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-medium">Telefon (optional)</span>
+              <input
+                type="tel"
+                className="rounded-lg border border-gray-300 px-3 py-2"
+                value={leaderPhone}
+                onChange={(e) => setLeaderPhone(e.target.value)}
+              />
+            </label>
           </div>
+          <p className="mt-1 text-xs text-gray-500">
+            Kann frei eingetragen werden, unabhängig davon, ob die Person unter „Vorstand“ hinterlegt
+            ist – praktisch, wenn der Schichtchef von Veranstaltung zu Veranstaltung wechselt.
+          </p>
+        </div>
+
+        <div className="mt-4">
+          <details>
+            <summary className="cursor-pointer text-sm font-medium text-gray-700">
+              Weitere Verantwortliche aus dem Vorstand zuordnen (optional, für Auswertungen)
+            </summary>
+            <div className="mt-2 flex flex-col gap-2 rounded-lg border border-gray-200 p-3">
+              {boardMembers.length === 0 && (
+                <p className="text-sm text-gray-500">
+                  Noch keine Vorstandsmitglieder hinterlegt (siehe Bereich „Vorstand“).
+                </p>
+              )}
+              {boardMembers.map((bm) => (
+                <div key={bm.id} className="flex items-center justify-between gap-2">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={leaderIds.has(bm.id)}
+                      onChange={() => toggleLeader(bm.id)}
+                    />
+                    <span>
+                      {bm.first_name} {bm.last_name}
+                      {bm.position && <span className="text-gray-500"> ({bm.position})</span>}
+                    </span>
+                  </label>
+                  {leaderIds.has(bm.id) && (
+                    <label className="flex items-center gap-1 text-xs text-gray-500">
+                      <input
+                        type="radio"
+                        name="primary-leader"
+                        checked={primaryId === bm.id}
+                        onChange={() => setPrimaryId(bm.id)}
+                      />
+                      Hauptverantwortlicher
+                    </label>
+                  )}
+                </div>
+              ))}
+            </div>
+          </details>
         </div>
 
         {error && <p className="mt-3 text-sm font-medium text-brand-red">{error}</p>}

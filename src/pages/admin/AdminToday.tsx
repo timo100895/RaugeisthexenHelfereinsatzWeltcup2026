@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { listEvents, listShiftsForEvent } from '@/services/admin';
 import { computeOccupancy } from '@/utils/capacity';
+import { getShiftLeaderDisplay } from '@/utils/leader';
 import { formatDateLong, formatTimeRange, toMinutes } from '@/utils/time';
 import LoadingScreen from '@/components/LoadingScreen';
 import { ShiftStatusPill } from '@/components/admin/StatusPill';
@@ -98,7 +99,7 @@ export default function AdminToday() {
 
 function ShiftBlock({ shift, compact }: { shift: any; compact?: boolean }) {
   const occ = computeOccupancy(shift, shift.leaders, shift.registrations);
-  const primary = shift.leaders.find((l: any) => l.is_primary);
+  const leader = getShiftLeaderDisplay(shift, shift.leaders);
   const activeHelpers = shift.registrations.filter((r: any) => r.status === 'active');
 
   return (
@@ -110,10 +111,10 @@ function ShiftBlock({ shift, compact }: { shift: any; compact?: boolean }) {
         </div>
         <ShiftStatusPill occupancy={occ} shiftStatus={shift.status} />
       </div>
-      {primary && (
+      {leader.name && (
         <p className="mt-2 text-sm text-gray-600">
-          Schichtchef: <strong>{primary.board_member.first_name} {primary.board_member.last_name}</strong>
-          {primary.board_member.phone && ` · ${primary.board_member.phone}`}
+          Schichtchef: <strong>{leader.name}</strong>
+          {leader.phone && ` · ${leader.phone}`}
         </p>
       )}
       {!compact && (

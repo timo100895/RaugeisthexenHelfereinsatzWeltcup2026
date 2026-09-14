@@ -6,8 +6,8 @@ import type { RegistrationRow, ShiftLeaderRow, ShiftRow } from '@/types/database
  * geladen wurden (spart zusätzliche Round-Trips in Admin-Ansichten).
  */
 export function effectiveCapacity(shift: ShiftRow, leaders: ShiftLeaderRow[]): number {
-  const hasPrimary = leaders.some((l) => l.is_primary);
-  const reduction = shift.leader_counts_as_helper && hasPrimary ? 1 : 0;
+  const hasLeader = Boolean(shift.leader_name?.trim()) || leaders.some((l) => l.is_primary);
+  const reduction = shift.leader_counts_as_helper && hasLeader ? 1 : 0;
   return Math.max(0, shift.capacity - reduction);
 }
 

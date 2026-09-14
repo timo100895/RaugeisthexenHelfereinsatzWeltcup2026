@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { listEvents, listShiftsForEvent } from '@/services/admin';
 import type { EventRow } from '@/types/database';
+import { getShiftLeaderDisplay } from '@/utils/leader';
 import { formatDateLong } from '@/utils/time';
 import { buildRegistrationsCsv, downloadTextFile } from '@/utils/csvExport';
 import { buildEventWorkbook, downloadBlob } from '@/utils/xlsxExport';
@@ -34,8 +35,8 @@ export default function AdminExport() {
   const leaderOptions = useMemo(() => {
     const names = new Set<string>();
     for (const s of shifts ?? []) {
-      const p = s.leaders.find((l: any) => l.is_primary);
-      if (p) names.add(`${p.board_member.first_name} ${p.board_member.last_name}`);
+      const name = getShiftLeaderDisplay(s, s.leaders).name;
+      if (name) names.add(name);
     }
     return [...names].sort();
   }, [shifts]);
@@ -46,8 +47,7 @@ export default function AdminExport() {
       if (dayFilter && s.event_day.date !== dayFilter) return false;
       if (shiftFilter && s.id !== shiftFilter) return false;
       if (leaderFilter) {
-        const p = s.leaders.find((l: any) => l.is_primary);
-        const name = p ? `${p.board_member.first_name} ${p.board_member.last_name}` : '';
+        const name = getShiftLeaderDisplay(s, s.leaders).name ?? '';
         if (name !== leaderFilter) return false;
       }
       return true;

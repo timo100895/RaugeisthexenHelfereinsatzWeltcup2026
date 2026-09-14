@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { listEvents, listShiftsForEvent, cancelRegistration, promoteFromWaitlist } from '@/services/admin';
 import type { EventRow } from '@/types/database';
 import { computeOccupancy } from '@/utils/capacity';
+import { getShiftLeaderDisplay } from '@/utils/leader';
 import { computeOverlap, formatDateLong, formatTimeRange } from '@/utils/time';
 import { friendlyErrorMessage } from '@/utils/errors';
 import LoadingScreen from '@/components/LoadingScreen';
@@ -38,8 +39,8 @@ export default function AdminHelpers() {
     if (!shifts) return [];
     const names = new Set<string>();
     for (const s of shifts) {
-      const primary = s.leaders.find((l: any) => l.is_primary);
-      if (primary) names.add(`${primary.board_member.first_name} ${primary.board_member.last_name}`);
+      const leader = getShiftLeaderDisplay(s, s.leaders);
+      if (leader.name) names.add(leader.name);
     }
     return [...names].sort();
   }, [shifts]);
@@ -49,9 +50,8 @@ export default function AdminHelpers() {
     const term = search.trim().toLowerCase();
     return shifts
       .map((s) => {
-        const primary = s.leaders.find((l: any) => l.is_primary);
-        const primaryName = primary ? `${primary.board_member.first_name} ${primary.board_member.last_name}` : '';
-        if (leaderFilter && primaryName !== leaderFilter) return null;
+        const leaderName = getShiftLeaderDisplay(s, s.leaders).name ?? '';
+        if (leaderFilter && leaderName !== leaderFilter) return null;
 
         let regs = s.registrations;
         if (statusFilter !== 'all') regs = regs.filter((r: any) => r.status === statusFilter);
@@ -159,7 +159,7 @@ export default function AdminHelpers() {
                   const occ = computeOccupancy(shift, shift.leaders, shift.registrations);
                   const next = dayShifts[idx + 1];
                   const overlap = next ? computeOverlap(shift, next) : null;
-                  const primary = shift.leaders.find((l: any) => l.is_primary);
+                  const leader = getShiftLeaderDisplay(shift, shift.leaders);
 
                   return (
                     <div key={shift.id}>
@@ -168,10 +168,8 @@ export default function AdminHelpers() {
                           <div>
                             <p className="font-bold">{shift.name}</p>
                             <p className="text-gray-600">{formatTimeRange(shift.start_time, shift.end_time)}</p>
-                            {primary && (
-                              <p className="text-sm text-gray-500">
-                                Schichtchef: {primary.board_member.first_name} {primary.board_member.last_name}
-                              </p>
+                            {leader.name && (
+                              <p className="text-sm text-gray-500">Schichtchef: {leader.name}</p>
                             )}
                           </div>
                           <ShiftStatusPill occupancy={occ} shiftStatus={shift.status} />

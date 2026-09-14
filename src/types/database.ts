@@ -67,6 +67,8 @@ export interface ShiftRow {
   status: ShiftStatus;
   manually_locked: boolean;
   leader_counts_as_helper: boolean;
+  leader_name: string | null;
+  leader_phone: string | null;
   notes: string | null;
   display_order: number;
   created_at: string;

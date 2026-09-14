@@ -105,6 +105,8 @@ export interface ShiftInput {
   status: ShiftRow['status'];
   manually_locked: boolean;
   leader_counts_as_helper: boolean;
+  leader_name: string | null;
+  leader_phone: string | null;
   notes: string | null;
   display_order: number;
 }

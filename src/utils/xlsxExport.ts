@@ -1,5 +1,6 @@
 import ExcelJS from 'exceljs';
 import { computeOccupancy } from './capacity';
+import { getShiftLeaderDisplay } from './leader';
 import { computeEventStats, formatHoursDecimal } from './stats';
 import { computeOverlap, formatTime, weekdayLabel, formatDateShort } from './time';
 
@@ -61,7 +62,7 @@ export async function buildEventWorkbook(eventTitle: string, shifts: any[]): Pro
   planSheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: planHeader.length } };
 
   sortedShifts.forEach((shift, idx) => {
-    const primary = shift.leaders.find((l: any) => l.is_primary);
+    const leaderName = getShiftLeaderDisplay(shift, shift.leaders).name ?? '';
     const activeHelpers = shift.registrations
       .filter((r: any) => r.status === 'active')
       .map((r: any) => `${r.helper.first_name} ${r.helper.last_name}`);
@@ -81,7 +82,7 @@ export async function buildEventWorkbook(eventTitle: string, shifts: any[]): Pro
       excelTime(shift.start_time),
       excelTime(shift.end_time),
       handover,
-      primary ? `${primary.board_member.first_name} ${primary.board_member.last_name}` : '',
+      leaderName,
       ...activeHelpers,
     ]);
     row.getCell(1).numFmt = 'dd.mm.yyyy';
@@ -112,7 +113,7 @@ export async function buildEventWorkbook(eventTitle: string, shifts: any[]): Pro
   allSheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: allHeader.length } };
 
   for (const shift of sortedShifts) {
-    const primary = shift.leaders.find((l: any) => l.is_primary);
+    const leaderName = getShiftLeaderDisplay(shift, shift.leaders).name ?? '';
     for (const reg of shift.registrations) {
       const row = allSheet.addRow([
         reg.helper.first_name,
@@ -124,7 +125,7 @@ export async function buildEventWorkbook(eventTitle: string, shifts: any[]): Pro
         shift.name,
         excelTime(shift.start_time),
         excelTime(shift.end_time),
-        primary ? `${primary.board_member.first_name} ${primary.board_member.last_name}` : '',
+        leaderName,
         STATUS_LABEL[reg.status] ?? reg.status,
         reg.notes ?? '',
         new Date(reg.created_at),
@@ -148,7 +149,7 @@ export async function buildEventWorkbook(eventTitle: string, shifts: any[]): Pro
 
   for (const shift of sortedShifts) {
     const occ = computeOccupancy(shift, shift.leaders, shift.registrations);
-    const primary = shift.leaders.find((l: any) => l.is_primary);
+    const leaderName = getShiftLeaderDisplay(shift, shift.leaders).name ?? '';
     const row = overviewSheet.addRow([
       excelDate(shift.event_day.date),
       shift.name,
@@ -157,7 +158,7 @@ export async function buildEventWorkbook(eventTitle: string, shifts: any[]): Pro
       occ.capacity,
       occ.active,
       occ.available,
-      primary ? `${primary.board_member.first_name} ${primary.board_member.last_name}` : '',
+      leaderName,
       STATUS_SHIFT_LABEL[shift.status] ?? shift.status,
     ]);
     row.getCell(1).numFmt = 'dd.mm.yyyy';

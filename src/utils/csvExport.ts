@@ -1,4 +1,5 @@
 import { formatDateShort, formatTime, weekdayLabel } from './time';
+import { getShiftLeaderDisplay } from './leader';
 
 const STATUS_LABEL: Record<string, string> = {
   active: 'Angemeldet',
@@ -40,8 +41,7 @@ export function buildRegistrationsCsv(eventTitle: string, shifts: any[]): string
   const rows: string[][] = [];
 
   for (const shift of shifts) {
-    const primary = shift.leaders.find((l: any) => l.is_primary);
-    const leaderName = primary ? `${primary.board_member.first_name} ${primary.board_member.last_name}` : '';
+    const leaderName = getShiftLeaderDisplay(shift, shift.leaders).name ?? '';
 
     for (const reg of shift.registrations) {
       rows.push([

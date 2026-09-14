@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { listEvents, listShiftsForEvent } from '@/services/admin';
 import { useSettings } from '@/context/SettingsContext';
 import type { EventRow } from '@/types/database';
+import { getShiftLeaderDisplay } from '@/utils/leader';
 import { computeOverlap, formatDateLong, formatTimeRange } from '@/utils/time';
 import LoadingScreen from '@/components/LoadingScreen';
 import Logo from '@/components/Logo';
@@ -103,7 +104,7 @@ export default function AdminPrint() {
                 {formatDateLong(date)}
               </h2>
               {dayShifts.map((shift, idx) => {
-                const primary = shift.leaders.find((l: any) => l.is_primary);
+                const leader = getShiftLeaderDisplay(shift, shift.leaders);
                 const others = shift.leaders.filter((l: any) => !l.is_primary);
                 const activeHelpers = shift.registrations.filter((r: any) => r.status === 'active');
                 const next = dayShifts[idx + 1];
@@ -117,12 +118,10 @@ export default function AdminPrint() {
                         <span className="text-gray-700">{formatTimeRange(shift.start_time, shift.end_time)}</span>
                       </div>
 
-                      {primary && (
+                      {leader.name && (
                         <p className="mt-2 text-sm">
-                          <strong>Schichtchef:</strong> {primary.board_member.first_name}{' '}
-                          {primary.board_member.last_name}
-                          {showLeaderContact && primary.board_member.phone && ` · ${primary.board_member.phone}`}
-                          {showLeaderContact && primary.board_member.email && ` · ${primary.board_member.email}`}
+                          <strong>Schichtchef:</strong> {leader.name}
+                          {showLeaderContact && leader.phone && ` · ${leader.phone}`}
                         </p>
                       )}
                       {others.map((l: any) => (
