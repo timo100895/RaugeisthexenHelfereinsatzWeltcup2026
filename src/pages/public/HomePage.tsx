@@ -10,6 +10,7 @@ import LoadingScreen from '@/components/LoadingScreen';
 export default function HomePage() {
   const { settings } = useSettings();
   const [events, setEvents] = useState<EventRow[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     supabase
@@ -17,10 +18,30 @@ export default function HomePage() {
       .select('*')
       .eq('status', 'active')
       .order('start_date', { ascending: true })
-      .then(({ data }) => setEvents((data as EventRow[]) ?? []));
+      .then(({ data, error }) => {
+        if (error) {
+          setLoadError(error.message);
+          setEvents([]);
+        } else {
+          setEvents((data as EventRow[]) ?? []);
+        }
+      });
   }, []);
 
   if (events === null) return <LoadingScreen />;
+
+  if (loadError) {
+    return (
+      <div className="mx-auto max-w-lg p-8 text-center">
+        <h1 className="text-xl font-bold text-brand-red">Verbindung zu Supabase fehlgeschlagen</h1>
+        <p className="mt-2 text-gray-600">
+          Die Veranstaltungen konnten nicht geladen werden. Das deutet meist auf eine falsche oder
+          fehlende <code>VITE_SUPABASE_URL</code> / <code>VITE_SUPABASE_ANON_KEY</code> hin.
+        </p>
+        <p className="mt-4 rounded-lg bg-gray-100 p-3 text-left text-xs text-gray-500">{loadError}</p>
+      </div>
+    );
+  }
 
   if (events.length === 1) {
     return <Navigate to={`/veranstaltung/${events[0].slug}`} replace />;
