@@ -1,0 +1,4 @@
+project_id = "raugeisthexen-helfereinteilung"
+
+[functions.send-notification]
+verify_jwt = false

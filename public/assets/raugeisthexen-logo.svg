@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="Platzhalter-Logo Ornemer Raugeisthexen">
+  <rect width="200" height="200" fill="#ffffff"/>
+  <circle cx="100" cy="88" r="70" fill="#111111"/>
+  <text x="100" y="82" font-family="Georgia, 'Times New Roman', serif" font-size="46" font-weight="700" fill="#ffffff" text-anchor="middle">OR</text>
+  <text x="100" y="112" font-family="Arial, sans-serif" font-size="12" fill="#ffffff" text-anchor="middle" letter-spacing="1">PLATZHALTER</text>
+  <text x="100" y="182" font-family="Arial, sans-serif" font-size="13" fill="#111111" text-anchor="middle" font-weight="600">Ornemer Raugeisthexen</text>
+</svg>

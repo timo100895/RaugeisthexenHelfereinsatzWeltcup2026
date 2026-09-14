@@ -1,0 +1,54 @@
+/* Druckoptimierte Styles für die Helferplan-Druckansicht (Abschnitt 42/93). */
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 14mm 12mm;
+  }
+
+  html,
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 11pt;
+  }
+
+  .print-page {
+    max-width: none !important;
+  }
+
+  .print-day {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .print-shift {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    border: 1px solid #999 !important;
+  }
+
+  .print-day + .print-day {
+    page-break-before: always;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  th,
+  td {
+    border: 1px solid #999;
+    padding: 4px 6px;
+    text-align: left;
+  }
+
+  .print-header {
+    border-bottom: 2px solid black;
+  }
+
+  a[href]::after {
+    content: '';
+  }
+}

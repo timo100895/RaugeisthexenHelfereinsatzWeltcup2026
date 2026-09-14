@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-black: #111111;
+  --color-red: #c81e1e;
+  --color-red-dark: #9c1717;
+  --color-green: #1f8a3b;
+  --color-green-dark: #166b2d;
+  --color-gray: #6b7280;
+  --color-gray-light: #f4f4f5;
+  --color-bg: #fafafa;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-black);
+  -webkit-tap-highlight-color: transparent;
+}
+
+* {
+  -webkit-font-smoothing: antialiased;
+}
+
+.focus-ring {
+  outline: none;
+}
+.focus-ring:focus-visible {
+  outline: 3px solid var(--color-green);
+  outline-offset: 2px;
+}
+
+/* Große Touch-Ziele für mobile Erfassung */
+button,
+a.button,
+input,
+select,
+textarea {
+  font-size: 16px; /* verhindert Zoom bei Fokus auf iOS Safari */
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+  border-radius: 999px;
+}
+
+@media print {
+  body {
+    background: white !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
