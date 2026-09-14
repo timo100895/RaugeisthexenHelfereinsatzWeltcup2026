@@ -237,32 +237,57 @@ npm run preview     # Produktions-Build lokal ansehen
 
 ## Cloudflare Einrichtung & Deployment
 
-1. Bei [Cloudflare Pages](https://dash.cloudflare.com/) ein neues Projekt
-   anlegen und mit dem GitHub-Repository verbinden.
-2. Build-Einstellungen:
-   - **Framework preset:** Vite
-   - **Build command:** `npm run build`
-   - **Build output directory:** `dist`
-3. Unter **Settings → Environment variables** die Variablen aus
-   `.env.example` (nur die `VITE_...`-Variablen!) für **Production** und
-   **Preview** eintragen (siehe nächster Abschnitt).
-4. Deployment auslösen (automatisch bei jedem Push auf `main`).
-5. `public/_redirects` sorgt dafür, dass alle Routen (React Router,
-   SPA) korrekt an `index.html` ausgeliefert werden.
+Das Deployment läuft über **GitHub Actions** (`.github/workflows/deploy.yml`):
+bei jedem Push auf `main` wird die Anwendung automatisch gebaut und nach
+Cloudflare Workers (Static Assets) deployt. Sämtliche Zugangsdaten liegen
+dabei **ausschließlich als GitHub-Repository-Secrets** – nicht in Cloudflare
+selbst, nicht im Code. Cloudflares eigene "Connect to Git"-Oberfläche wird
+dafür **nicht** benötigt/verwendet.
 
-Ein Cloudflare Worker wird für diese Anwendung **nicht benötigt** – sämtliche
-serverseitige Logik läuft in Supabase (PostgreSQL-Funktionen + Edge
-Function). Das hält die Architektur einfach und wartbar.
+**Einmalige Einrichtung:**
+
+1. **Cloudflare API-Token erzeugen:**
+   [dash.cloudflare.com](https://dash.cloudflare.com) → oben rechts auf das
+   Profil-Icon → **My Profile → API Tokens → Create Token** → Vorlage
+   **"Edit Cloudflare Workers"** verwenden → auf das eigene Konto
+   beschränken → erstellen → Token kopieren (wird nur einmal angezeigt).
+2. **Cloudflare Account-ID notieren:** im Dashboard unter
+   **Workers & Pages** (rechte Seitenleiste) oder auf der Overview-Seite der
+   Domain zu finden.
+3. **GitHub-Secrets eintragen:** im Repository unter
+   **Settings → Secrets and variables → Actions → New repository secret**
+   folgende vier Secrets anlegen:
+
+   | Secret-Name | Wert |
+   |---|---|
+   | `CLOUDFLARE_API_TOKEN` | Token aus Schritt 1 |
+   | `CLOUDFLARE_ACCOUNT_ID` | Account-ID aus Schritt 2 |
+   | `VITE_SUPABASE_URL` | Supabase Projekt-URL |
+   | `VITE_SUPABASE_ANON_KEY` | Supabase anon/publishable Key |
+
+4. Fertig. Ab dem nächsten Push auf `main` (oder manuell über den Reiter
+   **Actions → Deploy nach Cloudflare Workers → Run workflow**) baut und
+   deployt GitHub Actions automatisch. Der Worker wird beim ersten Lauf
+   automatisch angelegt (Name aus `wrangler.toml`), ein manuelles Anlegen in
+   der Cloudflare-Oberfläche ist nicht nötig.
+
+`wrangler.toml` konfiguriert eine reine statische SPA-Auslieferung
+(`[assets]` aus `dist/`, `not_found_handling = "single-page-application"`
+für React-Router-Routen). Ein eigener Worker-Code wird nicht benötigt –
+sämtliche serverseitige Logik läuft in Supabase (PostgreSQL-Funktionen +
+Edge Function). Das hält die Architektur einfach und wartbar.
 
 ## Environment Variables
 
-**Cloudflare Pages** (Build-/Runtime-Variablen, siehe `.env.example`):
+**GitHub Actions Secrets** (Settings → Secrets and variables → Actions,
+siehe auch `.env.example` für die lokale Entwicklung):
 
-| Variable | Beschreibung |
+| Secret | Beschreibung |
 |---|---|
 | `VITE_SUPABASE_URL` | Supabase Projekt-URL |
-| `VITE_SUPABASE_ANON_KEY` | Supabase anon public Key (bewusst öffentlich, durch RLS abgesichert) |
-| `VITE_APP_NAME` | Optionaler Anzeigename |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anon/publishable Key (bewusst öffentlich, durch RLS abgesichert) |
+| `CLOUDFLARE_API_TOKEN` | API-Token mit Workers-Bearbeitungsrechten (nur für den Deploy-Schritt) |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare Account-ID (nur für den Deploy-Schritt) |
 
 **Supabase Secrets** (nur serverseitig, für die Edge Function):
 
@@ -279,11 +304,12 @@ Function injiziert und muss **nicht** manuell gesetzt werden. Er darf
 
 ## Domain verbinden
 
-1. In Cloudflare Pages unter **Custom domains** die gewünschte Domain/
-   Subdomain hinzufügen (z.B. `weltcup2026.ornemer-raugeisthexen.de`).
-2. DNS-Eintrag wird bei Nutzung von Cloudflare als DNS-Provider automatisch
-   vorgeschlagen; sonst CNAME auf die von Cloudflare angezeigte Pages-URL
-   setzen.
+1. Im Cloudflare Dashboard unter **Workers & Pages** den deployten Worker
+   (`raugeisthexen-helfereinteilung`) öffnen → **Settings → Domains & Routes
+   → Add → Custom Domain** → gewünschte (Sub-)Domain eintragen, z.B.
+   `weltcup2026.ornemer-raugeisthexen.de`.
+2. Läuft die Domain bereits über Cloudflare als DNS-Provider, wird der
+   nötige DNS-Eintrag automatisch angelegt.
 3. `PUBLIC_SITE_URL` (Supabase Secret) auf die finale Domain aktualisieren,
    damit Links in E-Mails korrekt sind.
 

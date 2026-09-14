@@ -1,0 +1,42 @@
+name: Deploy nach Cloudflare Workers
+
+# Baut die Anwendung und deployt sie bei jedem Push auf "main" automatisch
+# nach Cloudflare (Workers Static Assets). Alle Zugangsdaten/Secrets liegen
+# ausschließlich in den GitHub-Repository-Secrets (Settings -> Secrets and
+# variables -> Actions) - nicht im Code und nicht in Cloudflare selbst.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v4
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      - name: TypeScript prüfen & Anwendung bauen
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_APP_NAME: "Ornemer Raugeisthexen - Helfereinteilung"
+
+      - name: Nach Cloudflare Workers deployen
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
