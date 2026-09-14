@@ -54,6 +54,11 @@ export default function ShiftCard({ shift, selected, disabled, onToggle }: Props
         {shift.is_full && shift.waitlist_enabled && !isClosed && (
           <span className="ml-2 text-sm text-gray-500">Anmeldung auf Warteliste möglich</span>
         )}
+        {shift.helper_first_names && shift.helper_first_names.length > 0 && (
+          <p className="mt-2 text-sm text-gray-500">
+            Bereits dabei: {shift.helper_first_names.join(', ')}
+          </p>
+        )}
       </div>
     </button>
   );

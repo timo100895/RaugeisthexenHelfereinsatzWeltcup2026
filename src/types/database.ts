@@ -132,6 +132,7 @@ export interface PublicShiftStatus {
   manually_locked: boolean;
   waitlist_enabled: boolean;
   leader_public_name: string | null;
+  helper_first_names: string[] | null;
 }
 
 export interface RegistrationDetail {
