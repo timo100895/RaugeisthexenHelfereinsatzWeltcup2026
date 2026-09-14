@@ -75,7 +75,8 @@ Sicherheitsinstanz.
 │   ├── context/          React Context (Auth, App-Einstellungen)
 │   └── types/            TypeScript-Typen passend zum DB-Schema
 ├── public/
-│   └── assets/           Logo, statische Dateien, Cloudflare _redirects/_headers
+│   └── assets/           Logo, statische Dateien
+│   └── _headers          Cloudflare Security-Header (Workers Static Assets)
 ├── supabase/
 │   ├── migrations/       Vollständiges DB-Schema, RLS, Trigger, RPCs (SQL)
 │   ├── functions/        Supabase Edge Function (E-Mail-Versand)
