@@ -12,6 +12,7 @@ import {
   setShiftLeaders,
   cancelRegistration,
   promoteFromWaitlist,
+  moveRegistration,
   type ShiftInput,
   type LeaderAssignment,
 } from '@/services/admin';
@@ -39,6 +40,8 @@ export default function AdminShifts() {
   const [shiftModalDay, setShiftModalDay] = useState<string | undefined>(undefined);
   const [addHelperShift, setAddHelperShift] = useState<any | null>(null);
   const [moveTarget, setMoveTarget] = useState<{ registration: any; shift: any } | null>(null);
+  const [dragOverShiftId, setDragOverShiftId] = useState<string | null>(null);
+  const [moving, setMoving] = useState(false);
 
   async function reload() {
     if (!eventId) return;
@@ -129,6 +132,29 @@ export default function AdminShifts() {
     }
   }
 
+  function handleDragStart(e: React.DragEvent, registrationId: string, fromShiftId: string) {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('application/json', JSON.stringify({ registrationId, fromShiftId }));
+  }
+
+  async function handleDrop(e: React.DragEvent, targetShiftId: string) {
+    e.preventDefault();
+    setDragOverShiftId(null);
+    const raw = e.dataTransfer.getData('application/json');
+    if (!raw) return;
+    const { registrationId, fromShiftId } = JSON.parse(raw);
+    if (fromShiftId === targetShiftId) return;
+    setMoving(true);
+    try {
+      await moveRegistration(registrationId, targetShiftId);
+      await reload();
+    } catch (err) {
+      setError(friendlyErrorMessage(err));
+    } finally {
+      setMoving(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -161,6 +187,11 @@ export default function AdminShifts() {
       )}
 
       {error && <p className="rounded-lg bg-red-50 p-3 text-sm font-medium text-brand-red">{error}</p>}
+      {moving && <p className="text-sm font-medium text-gray-500">Wird verschoben …</p>}
+
+      <p className="text-xs text-gray-400">
+        Tipp: Helfer (⠿) lassen sich per Ziehen direkt auf eine andere Schicht verschieben.
+      </p>
 
       {shiftsByDay.map(({ day, shifts: dayShifts }) => (
         <section key={day.id} className="rounded-2xl border border-gray-200 bg-white p-4">
@@ -192,7 +223,20 @@ export default function AdminShifts() {
 
                 return (
                   <div key={shift.id}>
-                    <div className="rounded-xl border border-gray-200 p-4">
+                    <div
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        if (dragOverShiftId !== shift.id) setDragOverShiftId(shift.id);
+                      }}
+                      onDragLeave={() => setDragOverShiftId((prev) => (prev === shift.id ? null : prev))}
+                      onDrop={(e) => handleDrop(e, shift.id)}
+                      className={`rounded-xl border p-4 transition-colors ${
+                        dragOverShiftId === shift.id
+                          ? 'border-brand-red bg-red-50'
+                          : 'border-gray-200'
+                      }`}
+                    >
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
                           <p className="text-lg font-bold">{shift.name}</p>
@@ -221,9 +265,13 @@ export default function AdminShifts() {
                         {activeRegs.map((r: any) => (
                           <li
                             key={r.id}
-                            className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-brand-gray-light px-3 py-2 text-sm"
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, r.id, shift.id)}
+                            title="Zum Verschieben auf eine andere Schicht ziehen"
+                            className="flex cursor-move flex-wrap items-center justify-between gap-2 rounded-lg bg-brand-gray-light px-3 py-2 text-sm active:opacity-70"
                           >
                             <span>
+                              <span className="mr-1 text-gray-400" aria-hidden>⠿</span>
                               {r.helper.first_name} {r.helper.last_name}
                               {r.helper.phone && ` · ${r.helper.phone}`}
                               {r.helper.email && ` · ${r.helper.email}`}

@@ -8,6 +8,7 @@ import { friendlyErrorMessage } from '@/utils/errors';
 import LoadingScreen from '@/components/LoadingScreen';
 import HandoverDivider from '@/components/HandoverDivider';
 import { ShiftStatusPill } from '@/components/admin/StatusPill';
+import BulkMoveModal from '@/components/admin/BulkMoveModal';
 
 export default function AdminHelpers() {
   const [events, setEvents] = useState<EventRow[] | null>(null);
@@ -17,6 +18,8 @@ export default function AdminHelpers() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'waitlist' | 'cancelled'>('all');
   const [leaderFilter, setLeaderFilter] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [showBulkMove, setShowBulkMove] = useState(false);
 
   useEffect(() => {
     listEvents().then((data) => {
@@ -32,6 +35,7 @@ export default function AdminHelpers() {
 
   useEffect(() => {
     reload();
+    setSelected(new Set());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
 
@@ -44,6 +48,18 @@ export default function AdminHelpers() {
     }
     return [...names].sort();
   }, [shifts]);
+
+  const shiftOptions = useMemo(
+    () =>
+      (shifts ?? []).map((s) => ({
+        id: s.id,
+        name: s.name,
+        date: s.event_day.date,
+        start_time: s.start_time,
+        end_time: s.end_time,
+      })),
+    [shifts]
+  );
 
   const filteredShifts = useMemo(() => {
     if (!shifts) return [];
@@ -72,6 +88,15 @@ export default function AdminHelpers() {
       .filter(Boolean) as any[];
   }, [shifts, search, statusFilter, leaderFilter]);
 
+  function toggleSelected(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   async function handleCancel(id: string) {
     if (!window.confirm('Diese Anmeldung wirklich absagen?')) return;
     try {
@@ -91,12 +116,28 @@ export default function AdminHelpers() {
     }
   }
 
+  async function handleBulkCancel() {
+    if (!window.confirm(`${selected.size} Anmeldung(en) wirklich absagen?`)) return;
+    setError(null);
+    const failures: string[] = [];
+    for (const id of selected) {
+      try {
+        await cancelRegistration(id);
+      } catch (err) {
+        failures.push(friendlyErrorMessage(err));
+      }
+    }
+    if (failures.length > 0) setError(`${failures.length} Absage(n) fehlgeschlagen: ${failures[0]}`);
+    setSelected(new Set());
+    await reload();
+  }
+
   if (events === null) return <LoadingScreen />;
 
   const days = [...new Set((shifts ?? []).map((s) => s.event_day.date))].sort();
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 pb-20">
       <h1 className="text-2xl font-bold">Helferübersicht</h1>
 
       <div className="flex flex-wrap gap-3 rounded-2xl border border-gray-200 bg-white p-4">
@@ -183,14 +224,26 @@ export default function AdminHelpers() {
                                   ? 'bg-gray-100 text-gray-400 line-through'
                                   : r.status === 'waitlist'
                                     ? 'bg-yellow-50'
-                                    : 'bg-brand-gray-light'
+                                    : selected.has(r.id)
+                                      ? 'bg-red-50 ring-1 ring-brand-red'
+                                      : 'bg-brand-gray-light'
                               }`}
                             >
-                              <span>
-                                {r.helper.first_name} {r.helper.last_name}
-                                {r.helper.phone && ` · ${r.helper.phone}`}
-                                {r.helper.email && ` · ${r.helper.email}`}
-                                {r.status === 'waitlist' && ' · Warteliste'}
+                              <span className="flex items-center gap-2">
+                                {r.status !== 'cancelled' && (
+                                  <input
+                                    type="checkbox"
+                                    checked={selected.has(r.id)}
+                                    onChange={() => toggleSelected(r.id)}
+                                    aria-label={`${r.helper.first_name} ${r.helper.last_name} auswählen`}
+                                  />
+                                )}
+                                <span>
+                                  {r.helper.first_name} {r.helper.last_name}
+                                  {r.helper.phone && ` · ${r.helper.phone}`}
+                                  {r.helper.email && ` · ${r.helper.email}`}
+                                  {r.status === 'waitlist' && ' · Warteliste'}
+                                </span>
                               </span>
                               {r.status !== 'cancelled' && (
                                 <span className="flex gap-2">
@@ -224,6 +277,46 @@ export default function AdminHelpers() {
             </section>
           );
         })
+      )}
+
+      {selected.size > 0 && (
+        <div className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white p-4 shadow-[0_-4px_16px_rgba(0,0,0,0.08)]">
+          <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3">
+            <p className="font-semibold">{selected.size} ausgewählt</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setSelected(new Set())}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold"
+              >
+                Auswahl aufheben
+              </button>
+              <button
+                onClick={() => setShowBulkMove(true)}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold"
+              >
+                Verschieben …
+              </button>
+              <button
+                onClick={handleBulkCancel}
+                className="rounded-lg bg-brand-red px-4 py-2 text-sm font-semibold text-white"
+              >
+                Absagen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showBulkMove && (
+        <BulkMoveModal
+          registrationIds={[...selected]}
+          options={shiftOptions}
+          onClose={() => setShowBulkMove(false)}
+          onDone={() => {
+            setSelected(new Set());
+            reload();
+          }}
+        />
       )}
     </div>
   );
