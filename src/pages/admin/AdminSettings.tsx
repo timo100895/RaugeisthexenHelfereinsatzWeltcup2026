@@ -86,19 +86,9 @@ export default function AdminSettings() {
           />
         </label>
 
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium">Benachrichtigungsadressen (Komma-getrennt)</span>
-          <input
-            className="rounded-lg border border-gray-300 px-3 py-2"
-            value={settings.notify_emails.join(', ')}
-            onChange={(e) =>
-              setSettings({
-                ...settings,
-                notify_emails: e.target.value.split(',').map((s) => s.trim()).filter(Boolean),
-              })
-            }
-          />
-        </label>
+        {/* Benachrichtigungsadressen sind ausgeblendet, solange kein E-Mail-Versand
+            (Resend) eingerichtet ist - siehe README, Abschnitt "E-Mail-Versand
+            konfigurieren". settings.notify_emails bleibt unveraendert gespeichert. */}
 
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium">Datenschutzhinweis</span>

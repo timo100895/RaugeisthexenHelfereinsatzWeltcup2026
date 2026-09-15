@@ -185,20 +185,11 @@ export default function EventFormModal({ initial, onClose, onSave }: Props) {
             />
             <span>Verantwortlichen (Schichtchef) öffentlich anzeigen</span>
           </label>
-          <label className="flex items-center gap-2 sm:col-span-2">
-            <input type="checkbox" checked={notifyLeader} onChange={(e) => setNotifyLeader(e.target.checked)} />
-            <span>Schichtchef bei Anmeldungen benachrichtigen</span>
-          </label>
-
-          <label className="flex flex-col gap-1 sm:col-span-2">
-            <span className="text-sm font-medium">Benachrichtigungs-E-Mails (Komma-getrennt)</span>
-            <input
-              className="rounded-lg border border-gray-300 px-3 py-2"
-              value={notifyEmails}
-              onChange={(e) => setNotifyEmails(e.target.value)}
-              placeholder="vorstand@verein.de, weltcup@verein.de"
-            />
-          </label>
+          {/* E-Mail-Benachrichtigungen (Schichtchef-Info, Vorstands-Adressen) sind
+              ausgeblendet, solange kein E-Mail-Versand (Resend) eingerichtet ist -
+              siehe README, Abschnitt "E-Mail-Versand konfigurieren". notifyLeader/
+              notifyEmails bleiben im State erhalten (unveraendert gespeichert),
+              die Felder koennen jederzeit wieder eingeblendet werden. */}
 
           <label className="flex flex-col gap-1 sm:col-span-2">
             <span className="text-sm font-medium">Bemerkung</span>
