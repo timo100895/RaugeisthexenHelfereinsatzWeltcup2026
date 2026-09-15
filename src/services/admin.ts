@@ -245,6 +245,16 @@ export async function promoteFromWaitlist(registrationId: string) {
     p_registration_id: registrationId,
   });
   if (error) throw error;
+
+  // Benachrichtigungs-E-Mail an den nachgerückten Helfer auslösen (best effort,
+  // das Nachruecken selbst ist bereits erfolgreich gespeichert).
+  supabase.functions
+    .invoke('send-notification', {
+      body: { action: 'waitlist_promoted', registration_id: registrationId },
+    })
+    .catch(() => {
+      /* E-Mail-Versand ist ein Komfortfeature, Fehler hier ignorieren wir bewusst */
+    });
 }
 
 export async function updateHelperRecord(

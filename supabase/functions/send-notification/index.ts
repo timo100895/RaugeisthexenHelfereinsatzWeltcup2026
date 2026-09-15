@@ -1,24 +1,35 @@
 // ============================================================================
 // Edge Function: send-notification
 //
-// Wird vom Frontend NACH einer erfolgreichen öffentlichen Buchung
-// (register_helper / add_shifts_to_registration) aufgerufen, um:
-//   1. dem Helfer eine Bestätigungs-E-Mail zu senden (falls E-Mail hinterlegt)
-//   2. den Vorstand (event.notify_emails / app_settings.notify_emails) über
-//      die neue Anmeldung zu informieren
-//   3. optional den zuständigen Schichtchef zu benachrichtigen, wenn das
-//      Event-Flag "notify_leader_on_registration" aktiv ist
+// Zwei Aufrufarten (unterschieden über "action" im Request-Body):
+//
+// 1. Standard (kein "action" gesetzt) - wird vom Frontend NACH einer
+//    erfolgreichen öffentlichen Buchung (register_helper /
+//    add_shifts_to_registration) aufgerufen, um:
+//      a) dem Helfer eine Bestätigungs-E-Mail zu senden (falls E-Mail hinterlegt)
+//      b) den Vorstand (event.notify_emails / app_settings.notify_emails) über
+//         die neue Anmeldung zu informieren
+//      c) optional den zuständigen Schichtchef zu benachrichtigen, wenn das
+//         Event-Flag "notify_leader_on_registration" aktiv ist
+//    Als Berechtigungsnachweis dient der Edit-Token, der genau wie bei den
+//    öffentlichen RPC-Funktionen geprüft wird (siehe get_registration_by_token
+//    in 0005_booking_rpc.sql).
+//
+// 2. action = "waitlist_promoted" - wird vom Adminbereich NACH einem
+//    erfolgreichen admin_promote_from_waitlist()-Aufruf ausgelöst, um den
+//    nachgerückten Helfer per E-Mail zu informieren. Als Berechtigungsnachweis
+//    dient hier das JWT des eingeloggten Admin-Benutzers (Authorization-Header),
+//    das serverseitig gegen admin_profiles geprüft wird - nicht der
+//    (dem Admin ohnehin nicht bekannte) Edit-Token des Helfers.
 //
 // Der Aufruf erfolgt bewusst NICHT mit dem Service-Role-Key im Frontend,
 // sondern über diese Edge Function, die den Key ausschließlich serverseitig
-// verwendet. Als Berechtigungsnachweis dient der Edit-Token, der genau wie
-// bei den öffentlichen RPC-Funktionen geprüft wird (siehe
-// get_registration_by_token in 0005_booking_rpc.sql).
+// verwendet.
 //
 // Diese Funktion ist rein zusätzlicher Komfort (E-Mail-Versand). Schlägt sie
 // fehl (z.B. weil kein RESEND_API_KEY gesetzt ist), bleibt die eigentliche
-// Buchung trotzdem gültig - das Frontend wertet den Rückgabewert nicht als
-// Voraussetzung für den Buchungserfolg.
+// Buchung/Aktion trotzdem gültig - der Rückgabewert wird vom Frontend nicht
+// als Voraussetzung für den eigentlichen Erfolg gewertet.
 // ============================================================================
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
@@ -35,10 +46,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface RequestBody {
+interface BookingRequestBody {
+  action?: undefined;
   edit_token: string;
   shift_ids: string[];
 }
+
+interface WaitlistPromotedRequestBody {
+  action: 'waitlist_promoted';
+  registration_id: string;
+}
+
+type RequestBody = BookingRequestBody | WaitlistPromotedRequestBody;
 
 function formatTime(t: string) {
   return t?.slice(0, 5) ?? '';
@@ -69,6 +88,71 @@ async function sendEmail(to: string, subject: string, html: string, text: string
   return { ok: true };
 }
 
+async function handleWaitlistPromoted(
+  req: Request,
+  supabase: ReturnType<typeof createClient>,
+  body: WaitlistPromotedRequestBody
+): Promise<Response> {
+  const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
+
+  const authHeader = req.headers.get('Authorization') ?? '';
+  const jwt = authHeader.replace(/^Bearer\s+/i, '');
+  if (!jwt) {
+    return new Response(JSON.stringify({ error: 'UNAUTHORIZED' }), { status: 401, headers: jsonHeaders });
+  }
+
+  const { data: userData, error: userErr } = await supabase.auth.getUser(jwt);
+  if (userErr || !userData?.user) {
+    return new Response(JSON.stringify({ error: 'UNAUTHORIZED' }), { status: 401, headers: jsonHeaders });
+  }
+
+  const { data: profile } = await supabase
+    .from('admin_profiles')
+    .select('role, active')
+    .eq('auth_user_id', userData.user.id)
+    .maybeSingle();
+
+  if (!profile?.active || !['admin', 'viewer'].includes(profile.role)) {
+    return new Response(JSON.stringify({ error: 'FORBIDDEN' }), { status: 403, headers: jsonHeaders });
+  }
+
+  if (!body.registration_id) {
+    return new Response(JSON.stringify({ error: 'INVALID_REQUEST' }), { status: 400, headers: jsonHeaders });
+  }
+
+  const { data: reg, error: regErr } = await supabase
+    .from('registrations')
+    .select(
+      `status, helper:helpers(first_name, email),
+       shift:shifts(start_time, end_time, event_day:event_days(date), event:events(title))`
+    )
+    .eq('id', body.registration_id)
+    .single();
+
+  if (regErr || !reg || reg.status !== 'active') {
+    return new Response(JSON.stringify({ error: 'REGISTRATION_NOT_FOUND' }), { status: 404, headers: jsonHeaders });
+  }
+
+  const helper = (reg as any).helper;
+  const shift = (reg as any).shift;
+
+  if (helper?.email) {
+    const dateLabel = formatDate(shift.event_day.date);
+    const timeLabel = `${formatTime(shift.start_time)} - ${formatTime(shift.end_time)} Uhr`;
+    const html = `
+      <p>Hallo ${helper.first_name},</p>
+      <p>gute Nachrichten: Du bist von der Warteliste nachgerückt und jetzt fest für folgende Schicht eingetragen:</p>
+      <p><strong>${dateLabel}</strong><br/>${timeLabel}</p>
+      <p>Über den Link aus deiner ursprünglichen Anmeldebestätigung kannst du deine Anmeldung jederzeit einsehen.</p>
+      <p>Viele Grüße<br/>Ornemer Raugeisthexen</p>
+    `;
+    const text = `Hallo ${helper.first_name},\n\ndu bist von der Warteliste nachgerückt und jetzt fest eingetragen fuer:\n${dateLabel}\n${timeLabel}\n\nViele Gruesse\nOrnemer Raugeisthexen`;
+    await sendEmail(helper.email, 'Du bist nachgerückt! – Ornemer Raugeisthexen', html, text);
+  }
+
+  return new Response(JSON.stringify({ ok: true }), { headers: jsonHeaders });
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -76,14 +160,18 @@ Deno.serve(async (req) => {
 
   try {
     const body: RequestBody = await req.json();
+    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+    if (body.action === 'waitlist_promoted') {
+      return await handleWaitlistPromoted(req, supabase, body);
+    }
+
     if (!body.edit_token || !Array.isArray(body.shift_ids) || body.shift_ids.length === 0) {
       return new Response(JSON.stringify({ error: 'INVALID_REQUEST' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
     // Token validieren + Helferdaten laden (nutzt dieselbe sichere RPC wie das Frontend)
     const { data: helperData, error: helperErr } = await supabase.rpc('get_registration_by_token', {
