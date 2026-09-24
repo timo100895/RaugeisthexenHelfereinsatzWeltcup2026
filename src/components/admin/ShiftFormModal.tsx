@@ -147,6 +147,11 @@ export default function ShiftFormModal({
               value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
             />
+            {startTime && endTime && endTime <= startTime && (
+              <span className="text-xs text-brand-green-dark">
+                ✓ Geht über Mitternacht – endet am Folgetag um {endTime} Uhr
+              </span>
+            )}
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium">Benötigte Helfer *</span>

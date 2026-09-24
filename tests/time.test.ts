@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { computeOverlap, durationMinutes, formatDuration, formatTimeRange, weekdayLabel } from '@/utils/time';
+import {
+  computeOverlap,
+  durationMinutes,
+  formatDuration,
+  formatTimeRange,
+  spansMidnight,
+  weekdayLabel,
+} from '@/utils/time';
 
 describe('computeOverlap', () => {
   it('erkennt die Übergabe zwischen Freitag Schicht 1 und Schicht 2 (Weltcup-Beispiel)', () => {
@@ -34,11 +41,35 @@ describe('durationMinutes / formatDuration', () => {
     expect(minutes).toBe(255);
     expect(formatDuration(minutes)).toBe('4 Stunden 15 Minuten');
   });
+
+  it('berechnet die Dauer korrekt für eine Schicht über Mitternacht (22:00-02:00 = 4 Stunden)', () => {
+    expect(durationMinutes('22:00:00', '02:00:00')).toBe(240);
+  });
+
+  it('berechnet die Dauer korrekt, wenn die Schicht kurz vor Mitternacht endet (23:00-23:59)', () => {
+    expect(durationMinutes('23:00:00', '23:59:00')).toBe(59);
+  });
+});
+
+describe('spansMidnight', () => {
+  it('erkennt eine Schicht über Mitternacht (22:00-02:00)', () => {
+    expect(spansMidnight('22:00:00', '02:00:00')).toBe(true);
+  });
+
+  it('erkennt eine normale Schicht nicht als über Mitternacht', () => {
+    expect(spansMidnight('11:00:00', '15:15:00')).toBe(false);
+  });
 });
 
 describe('formatTimeRange', () => {
   it('formatiert HH:MM:SS zu "HH:MM – HH:MM Uhr"', () => {
     expect(formatTimeRange('11:00:00', '15:15:00')).toBe('11:00 – 15:15 Uhr');
+  });
+
+  it('kennzeichnet eine Schicht über Mitternacht deutlich', () => {
+    expect(formatTimeRange('22:00:00', '02:00:00')).toBe(
+      '22:00 – 02:00 Uhr (über Nacht, endet am Folgetag)'
+    );
   });
 });
 
