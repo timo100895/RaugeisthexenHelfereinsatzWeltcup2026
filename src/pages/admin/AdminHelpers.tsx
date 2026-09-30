@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { listEvents, listShiftsForEvent, cancelRegistration, promoteFromWaitlist } from '@/services/admin';
+import {
+  listEvents,
+  listShiftsForEvent,
+  cancelRegistration,
+  promoteFromWaitlist,
+  regenerateEditToken,
+} from '@/services/admin';
 import type { EventRow } from '@/types/database';
 import { computeOccupancy } from '@/utils/capacity';
 import { getShiftLeaderDisplay } from '@/utils/leader';
@@ -9,6 +15,7 @@ import LoadingScreen from '@/components/LoadingScreen';
 import HandoverDivider from '@/components/HandoverDivider';
 import { ShiftStatusPill } from '@/components/admin/StatusPill';
 import BulkMoveModal from '@/components/admin/BulkMoveModal';
+import NewEditLinkModal from '@/components/admin/NewEditLinkModal';
 
 export default function AdminHelpers() {
   const [events, setEvents] = useState<EventRow[] | null>(null);
@@ -20,6 +27,7 @@ export default function AdminHelpers() {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showBulkMove, setShowBulkMove] = useState(false);
+  const [newLink, setNewLink] = useState<{ helperName: string; token: string } | null>(null);
 
   useEffect(() => {
     listEvents().then((data) => {
@@ -130,6 +138,21 @@ export default function AdminHelpers() {
     if (failures.length > 0) setError(`${failures.length} Absage(n) fehlgeschlagen: ${failures[0]}`);
     setSelected(new Set());
     await reload();
+  }
+
+  async function handleNewLink(helperId: string, helperName: string) {
+    if (
+      !window.confirm(
+        `Neuen Anmeldelink für ${helperName} erzeugen? Der bisherige Link funktioniert danach nicht mehr.`
+      )
+    )
+      return;
+    try {
+      const token = await regenerateEditToken(helperId);
+      setNewLink({ helperName, token });
+    } catch (err) {
+      setError(friendlyErrorMessage(err));
+    }
   }
 
   if (events === null) return <LoadingScreen />;
@@ -256,6 +279,14 @@ export default function AdminHelpers() {
                                     </button>
                                   )}
                                   <button
+                                    onClick={() =>
+                                      handleNewLink(r.helper_id, `${r.helper.first_name} ${r.helper.last_name}`)
+                                    }
+                                    className="font-semibold text-gray-600 underline"
+                                  >
+                                    Neuer Link
+                                  </button>
+                                  <button
                                     onClick={() => handleCancel(r.id)}
                                     className="font-semibold text-brand-red underline"
                                   >
@@ -316,6 +347,14 @@ export default function AdminHelpers() {
             setSelected(new Set());
             reload();
           }}
+        />
+      )}
+
+      {newLink && (
+        <NewEditLinkModal
+          helperName={newLink.helperName}
+          token={newLink.token}
+          onClose={() => setNewLink(null)}
         />
       )}
     </div>

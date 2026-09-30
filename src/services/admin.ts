@@ -265,6 +265,19 @@ export async function updateHelperRecord(
   if (error) throw error;
 }
 
+/**
+ * Erzeugt einen neuen persönlichen Änderungslink für einen Helfer (macht den
+ * alten Link ungültig) - für den Fall, dass der ursprüngliche Link verloren
+ * gegangen ist. Gibt den neuen, rohen Token einmalig zurück.
+ */
+export async function regenerateEditToken(helperId: string): Promise<string> {
+  const { data, error } = await supabase.rpc('admin_regenerate_edit_token', {
+    p_helper_id: helperId,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
 // ---------------------------------------------------------------------------
 // App settings
 // ---------------------------------------------------------------------------
