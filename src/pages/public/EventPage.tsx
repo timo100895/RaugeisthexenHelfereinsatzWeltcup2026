@@ -113,7 +113,7 @@ export default function EventPage() {
         <div className="flex flex-col gap-8 px-4">
           {days.map(([date, dayShifts]) => (
             <section key={date}>
-              <h2 className="mb-3 text-lg font-bold uppercase tracking-wide text-brand-black">
+              <h2 className="sticky top-0 z-20 -mx-4 mb-3 border-b border-gray-200 bg-white/95 px-4 py-2 text-lg font-bold uppercase tracking-wide text-brand-black shadow-sm backdrop-blur">
                 {formatDateLong(date)}
               </h2>
               <div className="flex flex-col gap-1">
