@@ -1,5 +1,5 @@
 import type { PublicShiftStatus } from '@/types/database';
-import { formatTimeRange } from '@/utils/time';
+import { formatTimeRange, weekdayShort, formatDateShort } from '@/utils/time';
 import CapacityBadge from '@/components/CapacityBadge';
 
 interface Props {
@@ -29,6 +29,9 @@ export default function ShiftCard({ shift, selected, disabled, onToggle }: Props
     >
       <div className="flex items-start justify-between gap-3">
         <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+            {weekdayShort(shift.date)}, {formatDateShort(shift.date)}
+          </p>
           <p className="text-lg font-bold text-brand-black">{shift.shift_name}</p>
           <p className="text-base text-gray-700">{formatTimeRange(shift.start_time, shift.end_time)}</p>
           {shift.leader_public_name && (
