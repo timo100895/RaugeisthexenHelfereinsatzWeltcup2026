@@ -409,11 +409,12 @@ So funktioniert es technisch:
   Audit-Log vermerkt.
 
 Einmalige Einrichtung (nach dem Deployment): die Migrationen
-`supabase/migrations/0016_accreditation_photos.sql` und
+`supabase/migrations/0016_accreditation_photos.sql`,
 `supabase/migrations/0017_photo_delete_policy.sql` und
- im Supabase SQL Editor ausführen
-(Einstellungen, Foto-Spalten, privater Bucket, Lösch-Berechtigung für Admins). Die
-Edge Functions werden vom GitHub-Workflow automatisch mit deployt.
+`supabase/migrations/0018_photo_mode_recommended.sql` im Supabase SQL Editor
+ausführen (Einstellungen, Foto-Spalten, privater Bucket, Lösch-Berechtigung für
+Admins, Foto-Modus „Empfohlen“). Die Edge Functions werden vom GitHub-Workflow
+automatisch mit deployt.
 
 > Hinweis zum Datenschutz: Fotos sind personenbezogene Daten. Der Datenschutztext
 > der Anwendung muss dazu vom Verein geprüft/ergänzt werden, und nach der
