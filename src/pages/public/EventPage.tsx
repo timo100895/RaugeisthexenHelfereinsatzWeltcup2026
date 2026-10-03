@@ -82,7 +82,7 @@ export default function EventPage() {
     return (
       <div className="mx-auto min-h-screen max-w-2xl bg-white">
         <Header event={event} />
-        <RegistrationSuccess result={successResult} shifts={shifts} />
+        <RegistrationSuccess result={successResult} shifts={shifts} event={event} />
       </div>
     );
   }
@@ -168,6 +168,7 @@ export default function EventPage() {
       {showForm && (
         <RegistrationForm
           shifts={selectedShifts}
+          event={event}
           onClose={() => setShowForm(false)}
           onSuccess={(result) => {
             setShowForm(false);

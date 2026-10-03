@@ -1,15 +1,19 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { PublicShiftStatus } from '@/types/database';
+import type { EventRow, PublicShiftStatus } from '@/types/database';
 import { formatDateLong, formatTimeRange } from '@/utils/time';
 import { resultStatusLabel } from '@/utils/errors';
 import type { RegisterResult } from './RegistrationForm';
+import PhotoStandaloneUpload from './PhotoStandaloneUpload';
 
 interface Props {
   result: RegisterResult;
   shifts: PublicShiftStatus[];
+  event: Pick<EventRow, 'photo_mode' | 'photo_hint'>;
 }
 
-export default function RegistrationSuccess({ result, shifts }: Props) {
+export default function RegistrationSuccess({ result, shifts, event }: Props) {
+  const [photoDone, setPhotoDone] = useState(false);
   const shiftById = new Map(shifts.map((s) => [s.shift_id, s]));
   const successful = result.results.filter((r) => r.status === 'active' || r.status === 'waitlist');
   const failed = result.results.filter((r) => r.status !== 'active' && r.status !== 'waitlist');
@@ -62,6 +66,33 @@ export default function RegistrationSuccess({ result, shifts }: Props) {
             })}
           </ul>
         </div>
+      )}
+
+      {(result.photo_status === 'failed' || result.photo_status === 'missing') && !photoDone && (
+        <div className="mt-6 rounded-xl border border-gray-200 p-4 text-left">
+          <p className="mb-3 font-semibold">
+            {result.photo_status === 'failed'
+              ? 'Dein Foto konnte nicht hochgeladen werden.'
+              : 'Du hast noch kein Foto hinzugefügt.'}
+          </p>
+          <p className="mb-3 text-sm text-gray-600">
+            Deine Anmeldung ist gespeichert. Das Foto kannst du jetzt hier nachreichen – oder später über
+            deinen persönlichen Link unten.
+          </p>
+          <PhotoStandaloneUpload
+            editToken={result.edit_token}
+            required={event.photo_mode === 'required'}
+            hint={event.photo_hint ?? null}
+            hasPhoto={false}
+            onUploaded={() => setPhotoDone(true)}
+          />
+        </div>
+      )}
+
+      {(result.photo_status === 'uploaded' || photoDone) && (
+        <p className="mt-6 rounded-xl bg-brand-green/10 p-3 text-sm font-medium text-brand-green-dark">
+          ✓ Dein Foto wurde gespeichert.
+        </p>
       )}
 
       <div className="mt-8 rounded-xl bg-brand-gray-light p-4 text-sm text-gray-600">

@@ -157,6 +157,7 @@ export default function AdminHelpers() {
 
   if (events === null) return <LoadingScreen />;
 
+  const photoMode = events.find((e) => e.id === eventId)?.photo_mode ?? 'off';
   const days = [...new Set((shifts ?? []).map((s) => s.event_day.date))].sort();
 
   return (
@@ -266,6 +267,15 @@ export default function AdminHelpers() {
                                   {r.helper.phone && ` · ${r.helper.phone}`}
                                   {r.helper.email && ` · ${r.helper.email}`}
                                   {r.status === 'waitlist' && ' · Warteliste'}
+                                  {photoMode !== 'off' && r.status !== 'cancelled' && (
+                                    <span
+                                      className={`ml-2 font-semibold ${
+                                        r.helper.photo_path ? 'text-brand-green-dark' : 'text-brand-red'
+                                      }`}
+                                    >
+                                      {r.helper.photo_path ? 'Foto ✓' : 'Foto fehlt'}
+                                    </span>
+                                  )}
                                 </span>
                               </span>
                               {r.status !== 'cancelled' && (

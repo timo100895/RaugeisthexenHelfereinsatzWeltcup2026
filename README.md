@@ -368,6 +368,42 @@ druckoptimierten Helferplan (DIN A4) inkl. Logo, Übergabezeiten und
 optionalen Kontaktdaten – "Drucken" nutzt den Browser-Druckdialog (auch
 "Als PDF speichern").
 
+## Foto-Upload & Akkreditierungsliste
+
+Für Veranstaltungen mit Akkreditierung (z.B. Weltcup) kann bei der Anmeldung ein
+Foto abgefragt werden. Einstellbar **pro Veranstaltung** im Adminbereich unter
+*Veranstaltungen → Bearbeiten → „Angaben & Foto bei der Anmeldung“*:
+
+- **Pflichtangaben:** Vorname, Nachname und E-Mail-Adresse müssen angegeben werden
+- **Foto:** *Nicht abfragen* (Feld wird gar nicht angezeigt) / *Optional* / *Pflicht*
+- **Hinweistext:** erscheint, sobald jemand auf „Bild hinzufügen“ klickt
+  (Foto-Vorgaben, frei editierbar)
+
+So funktioniert es technisch:
+
+- Das Foto wird im Browser auf max. 1200 px verkleinert und als JPEG über die
+  Edge Function `upload-helper-photo` hochgeladen. Als Berechtigungsnachweis dient
+  der persönliche Edit-Token der Anmeldung. Gespeichert wird es in einem
+  **privaten** Storage-Bucket (`helper-photos`) – öffentlich ist nichts lesbar,
+  Lesezugriff haben nur eingeloggte Admins/Viewer.
+- Schlägt der Upload fehl oder wird das Foto später nachgereicht, geht das über die
+  Erfolgsseite bzw. den persönlichen Link („Meine Anmeldung“); dort lässt sich das
+  Foto auch ersetzen. In der Helferübersicht steht pro Person „Foto ✓“ bzw.
+  „Foto fehlt“.
+- **Export → „Akkreditierungsliste & Fotos“:** Excel-Liste im Layout der Vorlage
+  (Vorname, Name, Funktion, Bild) sowie ein ZIP mit allen Fotos. Die Fotos sind darin
+  automatisch als `Vorname_Nachname.jpg` benannt – exakt der Name, der in der Spalte
+  „Bild“ steht. Wer sich mehrfach angemeldet hat, steht nur einmal in der Liste.
+
+Einmalige Einrichtung (nach dem Deployment): die Migration
+`supabase/migrations/0016_accreditation_photos.sql` im Supabase SQL Editor ausführen
+(legt die Einstellungen, die Foto-Spalten und den privaten Bucket an). Die Edge
+Function wird vom GitHub-Workflow automatisch mit deployt.
+
+> Hinweis zum Datenschutz: Fotos sind personenbezogene Daten. Der Datenschutztext
+> der Anwendung muss dazu vom Verein geprüft/ergänzt werden, und nach der
+> Veranstaltung sollten Fotos nicht länger als nötig aufbewahrt werden.
+
 ## Tests
 
 ```bash

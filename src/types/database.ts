@@ -3,6 +3,7 @@ export type ShiftStatus = 'open' | 'closed' | 'cancelled';
 export type RegistrationStatus = 'active' | 'cancelled' | 'waitlist';
 export type AdminRole = 'admin' | 'viewer' | 'shift_leader';
 export type LeaderRole = 'leader' | 'support';
+export type PhotoMode = 'off' | 'optional' | 'required';
 
 export interface AppSettings {
   id: 1;
@@ -33,6 +34,9 @@ export interface EventRow {
   notify_leader_on_registration: boolean;
   notify_emails: string[];
   notes: string | null;
+  require_contact_data: boolean;
+  photo_mode: PhotoMode;
+  photo_hint: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -90,6 +94,8 @@ export interface HelperRow {
   email: string | null;
   phone: string | null;
   notes: string | null;
+  photo_path: string | null;
+  photo_uploaded_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -146,6 +152,8 @@ export interface RegistrationDetail {
   date: string;
   event_id: string;
   event_title: string;
+  event_photo_mode?: PhotoMode;
+  event_photo_hint?: string | null;
 }
 
 export interface HelperWithRegistrations {
@@ -155,6 +163,8 @@ export interface HelperWithRegistrations {
   email: string | null;
   phone: string | null;
   notes: string | null;
+  has_photo?: boolean;
+  photo_uploaded_at?: string | null;
   registrations: RegistrationDetail[];
 }
 

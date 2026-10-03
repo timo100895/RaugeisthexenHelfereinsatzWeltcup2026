@@ -275,6 +275,15 @@ export default function AdminShifts() {
                               {r.helper.first_name} {r.helper.last_name}
                               {r.helper.phone && ` · ${r.helper.phone}`}
                               {r.helper.email && ` · ${r.helper.email}`}
+                              {(event.photo_mode ?? 'off') !== 'off' && (
+                                <span
+                                  className={`ml-2 font-semibold ${
+                                    r.helper.photo_path ? 'text-brand-green-dark' : 'text-brand-red'
+                                  }`}
+                                >
+                                  {r.helper.photo_path ? 'Foto ✓' : 'Foto fehlt'}
+                                </span>
+                              )}
                             </span>
                             <span className="flex gap-2">
                               <button

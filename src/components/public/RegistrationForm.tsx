@@ -1,43 +1,62 @@
 import { useState } from 'react';
-import type { PublicShiftStatus } from '@/types/database';
+import type { EventRow, PublicShiftStatus } from '@/types/database';
 import { formatDateLong, formatTimeRange } from '@/utils/time';
 import { friendlyErrorMessage } from '@/utils/errors';
 import { supabase } from '@/services/supabase';
+import { uploadHelperPhoto } from '@/services/photos';
+import PhotoPicker from './PhotoPicker';
+
+export type PhotoStatus = 'not_requested' | 'uploaded' | 'failed' | 'missing';
 
 export interface RegisterResult {
   helper_id: string;
   edit_token: string;
   results: { shift_id: string; status: string; registration_id?: string }[];
+  photo_status: PhotoStatus;
 }
+
+type RpcRegisterResult = Omit<RegisterResult, 'photo_status'>;
 
 interface Props {
   shifts: PublicShiftStatus[];
+  event: Pick<EventRow, 'photo_mode' | 'require_contact_data' | 'photo_hint'>;
   onClose: () => void;
   onSuccess: (result: RegisterResult) => void;
 }
 
-export default function RegistrationForm({ shifts, onClose, onSuccess }: Props) {
+export default function RegistrationForm({ shifts, event, onClose, onSuccess }: Props) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [notes, setNotes] = useState('');
+  const [photo, setPhoto] = useState<Blob | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [phase, setPhase] = useState<'saving' | 'photo'>('saving');
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<'form' | 'summary'>('form');
 
-  const contactMissing = !email.trim() && !phone.trim();
-  const nameMissing = !firstName.trim() || !lastName.trim();
+  const photoMode = event.photo_mode ?? 'off';
+  const requireContactData = event.require_contact_data ?? false;
+  const photoRequired = photoMode === 'required';
 
   function goToSummary(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (nameMissing) {
+    if (!firstName.trim() || !lastName.trim()) {
       setError('Bitte gib deinen Vor- und Nachnamen an.');
       return;
     }
-    if (contactMissing) {
+    if (requireContactData && !email.trim()) {
+      setError('Für diese Veranstaltung ist eine E-Mail-Adresse Pflicht.');
+      return;
+    }
+    if (!email.trim() && !phone.trim()) {
       setError('Bitte gib mindestens eine E-Mail-Adresse oder eine Telefonnummer an.');
+      return;
+    }
+    if (photoRequired && !photo) {
+      setError('Bitte füge ein aktuelles Foto hinzu (Button „Bild hinzufügen“).');
       return;
     }
     setStep('summary');
@@ -45,6 +64,7 @@ export default function RegistrationForm({ shifts, onClose, onSuccess }: Props) 
 
   async function submit() {
     setSubmitting(true);
+    setPhase('saving');
     setError(null);
     try {
       const { data, error: rpcError } = await supabase.rpc('register_helper', {
@@ -58,7 +78,22 @@ export default function RegistrationForm({ shifts, onClose, onSuccess }: Props) 
 
       if (rpcError) throw rpcError;
 
-      const result = data as RegisterResult;
+      const result = data as RpcRegisterResult;
+      const anySuccess = result.results.some((r) => r.status === 'active' || r.status === 'waitlist');
+
+      // Foto erst NACH der erfolgreichen Anmeldung hochladen (der Edit-Token
+      // dient als Berechtigungsnachweis). Schlägt der Upload fehl, bleibt die
+      // Anmeldung gültig - die Erfolgsseite bietet dann einen erneuten Versuch an.
+      let photoStatus: PhotoStatus = photoMode === 'off' ? 'not_requested' : 'missing';
+      if (photo && photoMode !== 'off' && anySuccess) {
+        setPhase('photo');
+        try {
+          await uploadHelperPhoto(result.edit_token, photo);
+          photoStatus = 'uploaded';
+        } catch {
+          photoStatus = 'failed';
+        }
+      }
 
       // Bestätigungs-/Benachrichtigungs-E-Mails asynchron auslösen (best effort,
       // die Buchung selbst ist bereits erfolgreich gespeichert).
@@ -70,7 +105,7 @@ export default function RegistrationForm({ shifts, onClose, onSuccess }: Props) 
           /* E-Mail-Versand ist ein Komfortfeature, Fehler hier ignorieren wir bewusst */
         });
 
-      onSuccess(result);
+      onSuccess({ ...result, photo_status: photoStatus });
     } catch (err) {
       setError(friendlyErrorMessage(err));
       setSubmitting(false);
@@ -120,7 +155,9 @@ export default function RegistrationForm({ shifts, onClose, onSuccess }: Props) 
                 </label>
               </div>
               <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-gray-700">E-Mail-Adresse</span>
+                <span className="text-sm font-medium text-gray-700">
+                  E-Mail-Adresse{requireContactData ? ' *' : ''}
+                </span>
                 <input
                   type="email"
                   className="rounded-xl border border-gray-300 px-4 py-3 focus-ring"
@@ -128,6 +165,7 @@ export default function RegistrationForm({ shifts, onClose, onSuccess }: Props) 
                   onChange={(e) => setEmail(e.target.value)}
                   autoComplete="email"
                   inputMode="email"
+                  required={requireContactData}
                 />
               </label>
               <label className="flex flex-col gap-1">
@@ -142,8 +180,21 @@ export default function RegistrationForm({ shifts, onClose, onSuccess }: Props) 
                 />
               </label>
               <p className="text-xs text-gray-500">
-                Bitte mindestens eine E-Mail-Adresse oder Telefonnummer angeben.
+                {requireContactData
+                  ? 'Vorname, Nachname und E-Mail-Adresse sind Pflichtangaben.'
+                  : 'Bitte mindestens eine E-Mail-Adresse oder Telefonnummer angeben.'}
               </p>
+
+              {photoMode !== 'off' && (
+                <PhotoPicker
+                  blob={photo}
+                  onChange={setPhoto}
+                  required={photoRequired}
+                  requireContactData={requireContactData}
+                  hint={event.photo_hint ?? null}
+                />
+              )}
+
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium text-gray-700">Bemerkung (optional)</span>
                 <textarea
@@ -187,6 +238,11 @@ export default function RegistrationForm({ shifts, onClose, onSuccess }: Props) 
                 </p>
                 {email && <p className="text-sm text-gray-600">{email}</p>}
                 {phone && <p className="text-sm text-gray-600">{phone}</p>}
+                {photoMode !== 'off' && (
+                  <p className="mt-1 text-sm text-gray-600">
+                    Foto: {photo ? '✓ hinzugefügt' : 'nicht hinzugefügt'}
+                  </p>
+                )}
               </div>
 
               {error && <p className="text-sm font-medium text-brand-red">{error}</p>}
@@ -206,7 +262,11 @@ export default function RegistrationForm({ shifts, onClose, onSuccess }: Props) 
                   disabled={submitting}
                   className="focus-ring flex-1 rounded-xl bg-brand-red py-4 font-bold text-white disabled:opacity-60"
                 >
-                  {submitting ? 'Anmeldung wird gespeichert …' : 'Verbindlich anmelden'}
+                  {submitting
+                    ? phase === 'photo'
+                      ? 'Foto wird hochgeladen …'
+                      : 'Anmeldung wird gespeichert …'
+                    : 'Verbindlich anmelden'}
                 </button>
               </div>
             </div>

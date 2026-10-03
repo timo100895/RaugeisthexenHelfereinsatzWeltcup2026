@@ -6,8 +6,11 @@ import { formatDateLong } from '@/utils/time';
 import { buildRegistrationsCsv, downloadTextFile } from '@/utils/csvExport';
 import { buildEventWorkbook, downloadBlob } from '@/utils/xlsxExport';
 import LoadingScreen from '@/components/LoadingScreen';
+import AccreditationCard from '@/components/admin/AccreditationCard';
+import { useSettings } from '@/context/SettingsContext';
 
 export default function AdminExport() {
+  const { settings } = useSettings();
   const [events, setEvents] = useState<EventRow[] | null>(null);
   const [eventId, setEventId] = useState('');
   const [shifts, setShifts] = useState<any[] | null>(null);
@@ -152,6 +155,8 @@ export default function AdminExport() {
           {busy ? 'Erzeuge Excel-Datei …' : 'Excel (XLSX) exportieren'}
         </button>
       </div>
+
+      {event && <AccreditationCard event={event} shifts={shifts} orgName={settings.org_name} />}
     </div>
   );
 }

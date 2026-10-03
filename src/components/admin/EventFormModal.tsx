@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import type { EventRow } from '@/types/database';
+import type { EventRow, PhotoMode } from '@/types/database';
 import type { EventInput } from '@/services/admin';
+import { DEFAULT_PHOTO_HINT } from '@/utils/photo';
 
 interface Props {
   initial?: EventRow;
@@ -34,6 +35,9 @@ export default function EventFormModal({ initial, onClose, onSave }: Props) {
   const [notifyLeader, setNotifyLeader] = useState(initial?.notify_leader_on_registration ?? false);
   const [notifyEmails, setNotifyEmails] = useState(initial?.notify_emails.join(', ') ?? '');
   const [notes, setNotes] = useState(initial?.notes ?? '');
+  const [requireContactData, setRequireContactData] = useState(initial?.require_contact_data ?? false);
+  const [photoMode, setPhotoMode] = useState<PhotoMode>(initial?.photo_mode ?? 'off');
+  const [photoHint, setPhotoHint] = useState(initial ? initial.photo_hint ?? '' : DEFAULT_PHOTO_HINT);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [slugTouched, setSlugTouched] = useState(!!initial);
@@ -61,6 +65,9 @@ export default function EventFormModal({ initial, onClose, onSave }: Props) {
           .map((s) => s.trim())
           .filter(Boolean),
         notes: notes.trim() || null,
+        require_contact_data: requireContactData,
+        photo_mode: photoMode,
+        photo_hint: photoHint.trim() || null,
       });
     } catch (err: any) {
       setError(err.message ?? 'Speichern fehlgeschlagen.');
@@ -190,6 +197,53 @@ export default function EventFormModal({ initial, onClose, onSave }: Props) {
               siehe README, Abschnitt "E-Mail-Versand konfigurieren". notifyLeader/
               notifyEmails bleiben im State erhalten (unveraendert gespeichert),
               die Felder koennen jederzeit wieder eingeblendet werden. */}
+
+          <div className="flex flex-col gap-4 rounded-xl border border-gray-200 p-4 sm:col-span-2">
+            <p className="text-sm font-bold">Angaben & Foto bei der Anmeldung (z.B. für die Akkreditierung)</p>
+
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={requireContactData}
+                onChange={(e) => setRequireContactData(e.target.checked)}
+              />
+              <span>
+                Pflichtangaben: <strong>Vorname, Nachname und E-Mail-Adresse</strong> müssen angegeben werden
+              </span>
+            </label>
+
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-medium">Foto bei der Anmeldung</span>
+              <select
+                className="rounded-lg border border-gray-300 px-3 py-2"
+                value={photoMode}
+                onChange={(e) => setPhotoMode(e.target.value as PhotoMode)}
+              >
+                <option value="off">Nicht abfragen (Feld wird nicht angezeigt)</option>
+                <option value="optional">Optional (Foto kann hochgeladen werden)</option>
+                <option value="required">Pflicht (Foto wird bei der Anmeldung verlangt)</option>
+              </select>
+              <span className="text-xs text-gray-500">
+                Das Foto ist öffentlich nicht sichtbar. Du kannst es im Adminbereich unter „Export“
+                zusammen mit der Akkreditierungsliste herunterladen.
+              </span>
+            </label>
+
+            {photoMode !== 'off' && (
+              <label className="flex flex-col gap-1">
+                <span className="text-sm font-medium">
+                  Hinweistext (erscheint, wenn jemand auf „Bild hinzufügen“ klickt)
+                </span>
+                <textarea
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  rows={9}
+                  value={photoHint}
+                  onChange={(e) => setPhotoHint(e.target.value)}
+                />
+              </label>
+            )}
+          </div>
 
           <label className="flex flex-col gap-1 sm:col-span-2">
             <span className="text-sm font-medium">Bemerkung</span>

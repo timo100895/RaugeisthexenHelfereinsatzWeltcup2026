@@ -9,6 +9,7 @@ import { friendlyErrorMessage } from '@/utils/errors';
 import Logo from '@/components/Logo';
 import LoadingScreen from '@/components/LoadingScreen';
 import ShiftCard from '@/components/public/ShiftCard';
+import PhotoStandaloneUpload from '@/components/public/PhotoStandaloneUpload';
 
 export default function MyRegistrationPage() {
   const { token } = useParams<{ token: string }>();
@@ -130,6 +131,11 @@ export default function MyRegistrationPage() {
   const cancelledRegs = data.registrations.filter((r) => r.status === 'cancelled');
   const existingShiftIds = new Set(data.registrations.map((r) => r.shift_id));
 
+  const photoRegs = activeRegs.filter((r) => r.event_photo_mode && r.event_photo_mode !== 'off');
+  const showPhotoSection = photoRegs.length > 0;
+  const photoRequired = photoRegs.some((r) => r.event_photo_mode === 'required');
+  const photoHint = photoRegs.find((r) => r.event_photo_hint)?.event_photo_hint ?? null;
+
   return (
     <div className="mx-auto min-h-screen max-w-2xl bg-white pb-16">
       <header className="flex items-center gap-3 bg-brand-black px-4 py-5 text-white">
@@ -241,6 +247,19 @@ export default function MyRegistrationPage() {
             </div>
           )}
         </section>
+
+        {showPhotoSection && (
+          <section>
+            <h2 className="mb-3 text-lg font-bold">Foto</h2>
+            <PhotoStandaloneUpload
+              editToken={token ?? ''}
+              required={photoRequired}
+              hint={photoHint}
+              hasPhoto={Boolean(data.has_photo)}
+              onUploaded={load}
+            />
+          </section>
+        )}
 
         <section>
           <h2 className="mb-3 text-lg font-bold">Kontaktdaten</h2>

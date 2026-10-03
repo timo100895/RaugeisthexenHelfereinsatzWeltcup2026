@@ -5,6 +5,7 @@ import type {
   BoardMemberRow,
   ShiftRow,
   AppSettings,
+  PhotoMode,
 } from '@/types/database';
 
 function unwrap<T>({ data, error }: { data: T | null; error: any }): T {
@@ -40,6 +41,9 @@ export interface EventInput {
   notify_leader_on_registration: boolean;
   notify_emails: string[];
   notes: string | null;
+  require_contact_data: boolean;
+  photo_mode: PhotoMode;
+  photo_hint: string | null;
 }
 
 export async function createEvent(input: EventInput): Promise<EventRow> {

@@ -63,3 +63,19 @@ Schichtchef soll standardmäßig NICHT automatisch einen der regulären
 Helferplätze belegen", optional aber schon). Die Logik existiert bewusst nur
 einmal, als SQL-Funktion, und wird sowohl vom Kapazitäts-Trigger als auch
 von der öffentlichen View und den Admin-Auswertungen verwendet.
+
+## Foto-Upload über Edge Function in einen privaten Bucket
+
+Fotos für die Akkreditierung sind personenbezogene Daten. Der Storage-Bucket
+`helper-photos` ist deshalb privat und hat **keine** Schreib- oder Leserechte für
+anonyme Nutzer. Hochgeladen wird ausschließlich über die Edge Function
+`upload-helper-photo`: Sie prüft den persönlichen Edit-Token (dieselbe
+Berechtigung wie beim Änderungslink), validiert Dateityp/-größe serverseitig und
+schreibt mit dem Service-Role-Key. Lesen dürfen nur eingeloggte Admins/Viewer
+(Storage-Policy auf `is_admin_or_viewer()`).
+
+Der Upload passiert **nach** der Anmeldung (der Token existiert erst dann). Ein
+fehlgeschlagener Upload macht die Anmeldung daher nicht ungültig; das Foto lässt
+sich über Erfolgsseite oder persönlichen Link nachreichen. Ein "Foto ist Pflicht"
+wird im Formular erzwungen und im Admin als "Foto fehlt" sichtbar gemacht, kann
+aber serverseitig nicht atomar mit der Anmeldung erzwungen werden.
