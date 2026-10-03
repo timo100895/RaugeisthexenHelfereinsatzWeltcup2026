@@ -1,7 +1,10 @@
 import { useMemo, useState } from 'react';
 import type { EventRow } from '@/types/database';
 import { supabase } from '@/services/supabase';
-import { collectAccreditationPersons } from '@/utils/accreditation';
+import { collectAccreditationPersons, collectPhotoHelpers, type PhotoHelper } from '@/utils/accreditation';
+import { deleteHelperPhotos } from '@/services/admin';
+import { useAuth } from '@/context/AuthContext';
+import HelperPhotoModal from './HelperPhotoModal';
 import { buildAccreditationWorkbook } from '@/utils/accreditationExport';
 import { downloadBlob } from '@/utils/xlsxExport';
 
@@ -36,6 +39,8 @@ interface Props {
   event: EventRow;
   shifts: any[] | null;
   orgName: string;
+  /** Wird nach dem Löschen von Fotos aufgerufen, damit die Daten neu geladen werden. */
+  onChanged: () => void;
 }
 
 /**
@@ -43,14 +48,66 @@ interface Props {
  * als ZIP. In der Liste steht pro Person der Dateiname des Fotos
  * (Vorname_Nachname.jpg) - dieselben Namen tragen die Dateien im ZIP.
  */
-export default function AccreditationCard({ event, shifts, orgName }: Props) {
+export default function AccreditationCard({ event, shifts, orgName, onChanged }: Props) {
+  const { isAdmin } = useAuth();
+  const [photoView, setPhotoView] = useState<PhotoHelper | null>(null);
   const [settings, setSettings] = useState<Settings>(() => loadSettings(orgName));
-  const [busy, setBusy] = useState<'xlsx' | 'zip' | null>(null);
+  const [busy, setBusy] = useState<'xlsx' | 'zip' | 'delete' | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   const persons = useMemo(() => collectAccreditationPersons(shifts ?? []), [shifts]);
   const withoutPhoto = persons.filter((p) => !p.photoPath);
+  const photoHelpers = useMemo(() => collectPhotoHelpers(shifts ?? []), [shifts]);
+
+  async function deleteOne(helper: PhotoHelper) {
+    if (
+      !window.confirm(`Foto von ${helper.firstName} ${helper.lastName} endgültig löschen?`)
+    ) {
+      return;
+    }
+    setBusy('delete');
+    setMessage(null);
+    const result = await deleteHelperPhotos([{ id: helper.id, path: helper.photoPath }], {
+      entityType: 'helper',
+      entityId: helper.id,
+    });
+    setBusy(null);
+    setMessage(
+      result.deleted === 1
+        ? `Foto von ${helper.firstName} ${helper.lastName} wurde gelöscht.`
+        : 'Das Foto konnte nicht gelöscht werden. Bitte versuche es erneut.'
+    );
+    onChanged();
+  }
+
+  async function deleteAll() {
+    if (photoHelpers.length === 0) return;
+    const confirmed = window.confirm(
+      `Wirklich ALLE ${photoHelpers.length} Fotos dieser Veranstaltung endgültig löschen?\n\n` +
+        'Das kann nicht rückgängig gemacht werden. Lade vorher bei Bedarf das ZIP mit allen Fotos herunter.'
+    );
+    if (!confirmed) return;
+    const typed = window.prompt('Zur Bestätigung bitte LÖSCHEN eingeben:');
+    if (typed?.trim().toUpperCase() !== 'LÖSCHEN') {
+      setMessage('Löschen abgebrochen – es wurde nichts gelöscht.');
+      return;
+    }
+
+    setBusy('delete');
+    setMessage(null);
+    const result = await deleteHelperPhotos(
+      photoHelpers.map((h) => ({ id: h.id, path: h.photoPath })),
+      { entityType: 'event', entityId: event.id }
+    );
+    setBusy(null);
+    setMessage(
+      result.failed === 0
+        ? `${result.deleted} Foto(s) wurden gelöscht.`
+        : `${result.deleted} Foto(s) gelöscht, ${result.failed} konnten nicht gelöscht werden (bitte erneut versuchen).`
+    );
+    onChanged();
+  }
 
   function update(patch: Partial<Settings>) {
     const next = { ...settings, ...patch };
@@ -198,6 +255,76 @@ export default function AccreditationCard({ event, shifts, orgName }: Props) {
 
       {progress && <p className="text-sm text-gray-600">{progress}</p>}
       {message && <p className="text-sm font-medium text-gray-700">{message}</p>}
+
+      <div className="border-t border-gray-200 pt-4">
+        <h3 className="font-bold">Fotos verwalten</h3>
+        <p className="mb-3 text-sm text-gray-500">
+          {photoHelpers.length === 0
+            ? 'Für diese Veranstaltung sind keine Fotos gespeichert.'
+            : `${photoHelpers.length} gespeicherte(s) Foto(s) – ansehen oder löschen.`}
+        </p>
+
+        {photoHelpers.length > 0 && (
+          <>
+            <details className="mb-3 rounded-xl border border-gray-200">
+              <summary className="cursor-pointer px-3 py-2 font-medium">Liste der Fotos anzeigen</summary>
+              <ul className="flex flex-col divide-y divide-gray-100 px-3 pb-2">
+                {photoHelpers.map((h) => (
+                  <li key={h.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                    <span>
+                      {h.firstName} {h.lastName}
+                      {h.photoUploadedAt && (
+                        <span className="text-gray-400">
+                          {' '}
+                          · {new Date(h.photoUploadedAt).toLocaleDateString('de-DE')}
+                        </span>
+                      )}
+                    </span>
+                    <span className="flex gap-3">
+                      <button onClick={() => setPhotoView(h)} className="font-semibold text-gray-600 underline">
+                        Ansehen
+                      </button>
+                      {isAdmin && (
+                        <button
+                          onClick={() => deleteOne(h)}
+                          disabled={busy !== null}
+                          className="font-semibold text-brand-red underline disabled:opacity-50"
+                        >
+                          Löschen
+                        </button>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+
+            {isAdmin && (
+              <button
+                onClick={deleteAll}
+                disabled={busy !== null}
+                className="rounded-xl border border-brand-red px-5 py-3 font-semibold text-brand-red disabled:opacity-50"
+              >
+                {busy === 'delete'
+                  ? 'Löscht …'
+                  : `Alle ${photoHelpers.length} Fotos dieser Veranstaltung löschen`}
+              </button>
+            )}
+          </>
+        )}
+      </div>
+
+      {photoView && (
+        <HelperPhotoModal
+          helperId={photoView.id}
+          helperName={`${photoView.firstName} ${photoView.lastName}`}
+          photoPath={photoView.photoPath}
+          uploadedAt={photoView.photoUploadedAt}
+          canDelete={isAdmin}
+          onClose={() => setPhotoView(null)}
+          onDeleted={onChanged}
+        />
+      )}
     </section>
   );
 }

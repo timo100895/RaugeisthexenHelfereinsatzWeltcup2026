@@ -16,6 +16,8 @@ import HandoverDivider from '@/components/HandoverDivider';
 import { ShiftStatusPill } from '@/components/admin/StatusPill';
 import BulkMoveModal from '@/components/admin/BulkMoveModal';
 import NewEditLinkModal from '@/components/admin/NewEditLinkModal';
+import HelperPhotoModal from '@/components/admin/HelperPhotoModal';
+import { useAuth } from '@/context/AuthContext';
 
 export default function AdminHelpers() {
   const [events, setEvents] = useState<EventRow[] | null>(null);
@@ -28,6 +30,8 @@ export default function AdminHelpers() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showBulkMove, setShowBulkMove] = useState(false);
   const [newLink, setNewLink] = useState<{ helperName: string; token: string } | null>(null);
+  const [photoView, setPhotoView] = useState<any | null>(null);
+  const { isAdmin } = useAuth();
 
   useEffect(() => {
     listEvents().then((data) => {
@@ -268,13 +272,17 @@ export default function AdminHelpers() {
                                   {r.helper.email && ` · ${r.helper.email}`}
                                   {r.status === 'waitlist' && ' · Warteliste'}
                                   {photoMode !== 'off' && r.status !== 'cancelled' && (
-                                    <span
-                                      className={`ml-2 font-semibold ${
-                                        r.helper.photo_path ? 'text-brand-green-dark' : 'text-brand-red'
-                                      }`}
-                                    >
-                                      {r.helper.photo_path ? 'Foto ✓' : 'Foto fehlt'}
-                                    </span>
+                                    r.helper.photo_path ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => setPhotoView(r.helper)}
+                                        className="ml-2 font-semibold text-brand-green-dark underline"
+                                      >
+                                        Foto ✓
+                                      </button>
+                                    ) : (
+                                      <span className="ml-2 font-semibold text-brand-red">Foto fehlt</span>
+                                    )
                                   )}
                                 </span>
                               </span>
@@ -365,6 +373,18 @@ export default function AdminHelpers() {
           helperName={newLink.helperName}
           token={newLink.token}
           onClose={() => setNewLink(null)}
+        />
+      )}
+
+      {photoView && (
+        <HelperPhotoModal
+          helperId={photoView.id}
+          helperName={`${photoView.first_name} ${photoView.last_name}`}
+          photoPath={photoView.photo_path}
+          uploadedAt={photoView.photo_uploaded_at}
+          canDelete={isAdmin}
+          onClose={() => setPhotoView(null)}
+          onDeleted={reload}
         />
       )}
     </div>

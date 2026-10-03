@@ -27,6 +27,8 @@ import { ShiftStatusPill } from '@/components/admin/StatusPill';
 import ShiftFormModal from '@/components/admin/ShiftFormModal';
 import AddHelperModal from '@/components/admin/AddHelperModal';
 import MoveHelperModal from '@/components/admin/MoveHelperModal';
+import HelperPhotoModal from '@/components/admin/HelperPhotoModal';
+import { useAuth } from '@/context/AuthContext';
 
 export default function AdminShifts() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -42,6 +44,8 @@ export default function AdminShifts() {
   const [moveTarget, setMoveTarget] = useState<{ registration: any; shift: any } | null>(null);
   const [dragOverShiftId, setDragOverShiftId] = useState<string | null>(null);
   const [moving, setMoving] = useState(false);
+  const [photoView, setPhotoView] = useState<any | null>(null);
+  const { isAdmin } = useAuth();
 
   async function reload() {
     if (!eventId) return;
@@ -275,15 +279,18 @@ export default function AdminShifts() {
                               {r.helper.first_name} {r.helper.last_name}
                               {r.helper.phone && ` · ${r.helper.phone}`}
                               {r.helper.email && ` · ${r.helper.email}`}
-                              {(event.photo_mode ?? 'off') !== 'off' && (
-                                <span
-                                  className={`ml-2 font-semibold ${
-                                    r.helper.photo_path ? 'text-brand-green-dark' : 'text-brand-red'
-                                  }`}
-                                >
-                                  {r.helper.photo_path ? 'Foto ✓' : 'Foto fehlt'}
-                                </span>
-                              )}
+                              {(event.photo_mode ?? 'off') !== 'off' &&
+                                (r.helper.photo_path ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setPhotoView(r.helper)}
+                                    className="ml-2 font-semibold text-brand-green-dark underline"
+                                  >
+                                    Foto ✓
+                                  </button>
+                                ) : (
+                                  <span className="ml-2 font-semibold text-brand-red">Foto fehlt</span>
+                                ))}
                             </span>
                             <span className="flex gap-2">
                               <button
@@ -393,6 +400,18 @@ export default function AdminShifts() {
             setAddHelperShift(null);
             reload();
           }}
+        />
+      )}
+
+      {photoView && (
+        <HelperPhotoModal
+          helperId={photoView.id}
+          helperName={`${photoView.first_name} ${photoView.last_name}`}
+          photoPath={photoView.photo_path}
+          uploadedAt={photoView.photo_uploaded_at}
+          canDelete={isAdmin}
+          onClose={() => setPhotoView(null)}
+          onDeleted={reload}
         />
       )}
 

@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.upload-helper-photo]
 verify_jwt = false
+
+[functions.get-helper-photo]
+verify_jwt = false

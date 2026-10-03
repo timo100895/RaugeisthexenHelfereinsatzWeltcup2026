@@ -395,14 +395,26 @@ So funktioniert es technisch:
   automatisch als `Vorname_Nachname.jpg` benannt – exakt der Name, der in der Spalte
   „Bild“ steht. Wer sich mehrfach angemeldet hat, steht nur einmal in der Liste.
 
-Einmalige Einrichtung (nach dem Deployment): die Migration
-`supabase/migrations/0016_accreditation_photos.sql` im Supabase SQL Editor ausführen
-(legt die Einstellungen, die Foto-Spalten und den privaten Bucket an). Die Edge
-Function wird vom GitHub-Workflow automatisch mit deployt.
+- **Eigenes Foto ansehen/ersetzen:** Auf „Meine Anmeldung“ sieht der Helfer das
+  aktuell gespeicherte Foto (über eine 5 Minuten gültige, signierte URL der Edge
+  Function `get-helper-photo`) und kann es ersetzen.
+- **Fotos ansehen und löschen (Admin):** In der Helferübersicht/Schichtverwaltung
+  öffnet ein Klick auf „Foto ✓“ das Bild – dort lässt es sich einzeln löschen.
+  Unter *Export → Fotos verwalten* gibt es die Liste aller Fotos der Veranstaltung
+  sowie „Alle Fotos dieser Veranstaltung löschen“ (mit doppelter Bestätigung, z.B.
+  nach dem Event). Löschen dürfen nur Admins, nicht Viewer; die Aktion wird im
+  Audit-Log vermerkt.
+
+Einmalige Einrichtung (nach dem Deployment): die Migrationen
+`supabase/migrations/0016_accreditation_photos.sql` und
+`supabase/migrations/0017_photo_delete_policy.sql` im Supabase SQL Editor ausführen
+(Einstellungen, Foto-Spalten, privater Bucket, Lösch-Berechtigung für Admins). Die
+Edge Functions werden vom GitHub-Workflow automatisch mit deployt.
 
 > Hinweis zum Datenschutz: Fotos sind personenbezogene Daten. Der Datenschutztext
 > der Anwendung muss dazu vom Verein geprüft/ergänzt werden, und nach der
-> Veranstaltung sollten Fotos nicht länger als nötig aufbewahrt werden.
+> Veranstaltung sollten Fotos nicht länger als nötig aufbewahrt werden (siehe
+> „Alle Fotos dieser Veranstaltung löschen“).
 
 ## Tests
 

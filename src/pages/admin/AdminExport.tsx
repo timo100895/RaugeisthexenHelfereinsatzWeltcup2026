@@ -156,7 +156,14 @@ export default function AdminExport() {
         </button>
       </div>
 
-      {event && <AccreditationCard event={event} shifts={shifts} orgName={settings.org_name} />}
+      {event && (
+        <AccreditationCard
+          event={event}
+          shifts={shifts}
+          orgName={settings.org_name}
+          onChanged={() => listShiftsForEvent(event.id).then(setShifts)}
+        />
+      )}
     </div>
   );
 }

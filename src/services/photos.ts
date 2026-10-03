@@ -26,3 +26,16 @@ export async function uploadHelperPhoto(editToken: string, photo: Blob): Promise
   }
   throw new Error(code);
 }
+
+/**
+ * Holt eine kurzlebige, signierte URL zum EIGENEN, bereits hochgeladenen Foto
+ * des Helfers (null, wenn noch keines vorliegt). Siehe Edge Function
+ * "get-helper-photo".
+ */
+export async function fetchOwnPhotoUrl(editToken: string): Promise<string | null> {
+  const { data, error } = await supabase.functions.invoke('get-helper-photo', {
+    body: { edit_token: editToken },
+  });
+  if (error) throw new Error('UPLOAD_FAILED');
+  return (data?.url as string | null) ?? null;
+}

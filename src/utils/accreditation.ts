@@ -10,6 +10,42 @@ export interface AccreditationPerson {
   photoFileName: string | null;
 }
 
+export interface PhotoHelper {
+  id: string;
+  firstName: string;
+  lastName: string;
+  photoPath: string;
+  photoUploadedAt: string | null;
+}
+
+/**
+ * Alle Helfer-Datensätze mit hinterlegtem Foto, die in dieser Veranstaltung
+ * mindestens eine Anmeldung haben (egal ob aktiv, Warteliste oder storniert) -
+ * Grundlage zum Löschen der Fotos nach der Veranstaltung. Hier wird bewusst
+ * NICHT nach Namen zusammengeführt: jeder Datensatz hat sein eigenes Foto.
+ */
+export function collectPhotoHelpers(shifts: any[]): PhotoHelper[] {
+  const byId = new Map<string, PhotoHelper>();
+  for (const shift of shifts) {
+    for (const reg of shift.registrations ?? []) {
+      const helper = reg.helper;
+      if (!helper?.photo_path || byId.has(helper.id)) continue;
+      byId.set(helper.id, {
+        id: helper.id,
+        firstName: helper.first_name,
+        lastName: helper.last_name,
+        photoPath: helper.photo_path,
+        photoUploadedAt: helper.photo_uploaded_at ?? null,
+      });
+    }
+  }
+  return [...byId.values()].sort(
+    (a, b) =>
+      a.lastName.localeCompare(b.lastName, 'de', { sensitivity: 'base' }) ||
+      a.firstName.localeCompare(b.firstName, 'de', { sensitivity: 'base' })
+  );
+}
+
 function nameKey(first: string, last: string): string {
   const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
   return `${norm(first)}|${norm(last)}`;

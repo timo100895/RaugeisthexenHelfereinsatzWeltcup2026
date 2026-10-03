@@ -11,6 +11,8 @@ interface Props {
   requireContactData: boolean;
   /** Hinweistext der Veranstaltung (wird beim Klick auf "Bild hinzufügen" angezeigt). */
   hint: string | null;
+  /** Überschrift über dem Feld (Standard: "Foto" mit Pflicht-/Optional-Zusatz). */
+  label?: string;
   disabled?: boolean;
 }
 
@@ -20,7 +22,15 @@ interface Props {
  * oder Galerie). Das Bild wird sofort verkleinert/als JPEG vorbereitet; die
  * Vorschau sieht nur der Nutzer selbst.
  */
-export default function PhotoPicker({ blob, onChange, required, requireContactData, hint, disabled }: Props) {
+export default function PhotoPicker({
+  blob,
+  onChange,
+  required,
+  requireContactData,
+  hint,
+  label,
+  disabled,
+}: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showHint, setShowHint] = useState(false);
@@ -65,7 +75,7 @@ export default function PhotoPicker({ blob, onChange, required, requireContactDa
   return (
     <div className="flex flex-col gap-2">
       <span className="text-sm font-medium text-gray-700">
-        Foto {required ? '*' : '(optional)'}
+        {label ?? `Foto ${required ? '*' : '(optional)'}`}
       </span>
 
       <input

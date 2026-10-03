@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import PhotoPicker from './PhotoPicker';
-import { uploadHelperPhoto } from '@/services/photos';
+import { fetchOwnPhotoUrl, uploadHelperPhoto } from '@/services/photos';
 import { friendlyErrorMessage } from '@/utils/errors';
 
 interface Props {
@@ -11,12 +11,37 @@ interface Props {
   onUploaded?: () => void;
 }
 
-/** Foto nachträglich hochladen bzw. ersetzen (Erfolgsseite, "Meine Anmeldung"). */
+/**
+ * Foto nachträglich hochladen bzw. ersetzen (Erfolgsseite, "Meine Anmeldung").
+ * Liegt bereits ein Foto vor, wird es dem Helfer selbst angezeigt (über eine
+ * kurzlebige, signierte URL - für alle anderen bleibt es unsichtbar).
+ */
 export default function PhotoStandaloneUpload({ editToken, required, hint, hasPhoto, onUploaded }: Props) {
   const [blob, setBlob] = useState<Blob | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [uploaded, setUploaded] = useState(false);
+  const [uploadCount, setUploadCount] = useState(0);
+  const [currentUrl, setCurrentUrl] = useState<string | null>(null);
+
+  const photoOnFile = hasPhoto || uploadCount > 0;
+
+  useEffect(() => {
+    if (!photoOnFile) {
+      setCurrentUrl(null);
+      return;
+    }
+    let cancelled = false;
+    fetchOwnPhotoUrl(editToken)
+      .then((url) => {
+        if (!cancelled) setCurrentUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setCurrentUrl(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [editToken, photoOnFile, uploadCount]);
 
   async function upload() {
     if (!blob) return;
@@ -24,7 +49,7 @@ export default function PhotoStandaloneUpload({ editToken, required, hint, hasPh
     setError(null);
     try {
       await uploadHelperPhoto(editToken, blob);
-      setUploaded(true);
+      setUploadCount((n) => n + 1);
       setBlob(null);
       onUploaded?.();
     } catch (err) {
@@ -34,14 +59,22 @@ export default function PhotoStandaloneUpload({ editToken, required, hint, hasPh
     }
   }
 
-  const photoOnFile = hasPhoto || uploaded;
-
   return (
     <div className="flex flex-col gap-3 text-left">
-      {photoOnFile && !blob && (
-        <p className="rounded-xl bg-brand-green/10 p-3 text-sm font-medium text-brand-green-dark">
-          ✓ Dein Foto wurde gespeichert. Du kannst es unten bei Bedarf durch ein neues ersetzen.
-        </p>
+      {photoOnFile && (
+        <div className="flex items-center gap-4 rounded-xl bg-brand-green/10 p-3">
+          {currentUrl && (
+            <img
+              src={currentUrl}
+              alt="Dein aktuell hochgeladenes Foto"
+              className="h-28 w-24 shrink-0 rounded-xl border border-gray-200 bg-white object-cover"
+            />
+          )}
+          <p className="text-sm font-medium text-brand-green-dark">
+            ✓ Dein Foto wurde gespeichert{currentUrl ? ' (so sieht es aktuell aus)' : ''}. Du kannst es unten
+            bei Bedarf durch ein neues ersetzen.
+          </p>
+        </div>
       )}
 
       <PhotoPicker
@@ -50,6 +83,7 @@ export default function PhotoStandaloneUpload({ editToken, required, hint, hasPh
         required={required && !photoOnFile}
         requireContactData={false}
         hint={hint}
+        label={photoOnFile ? 'Neues Foto' : undefined}
         disabled={uploading}
       />
 

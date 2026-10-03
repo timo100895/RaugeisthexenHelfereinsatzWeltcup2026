@@ -269,6 +269,73 @@ export async function updateHelperRecord(
   if (error) throw error;
 }
 
+const PHOTO_BUCKET = 'helper-photos';
+
+/** Kurzlebige, signierte URL zum Ansehen eines Fotos (nur für eingeloggte Admins/Viewer). */
+export async function getHelperPhotoUrl(path: string): Promise<string> {
+  const { data, error } = await supabase.storage.from(PHOTO_BUCKET).createSignedUrl(path, 120);
+  if (error || !data) throw error ?? new Error('STORAGE_ERROR');
+  return data.signedUrl;
+}
+
+export interface PhotoDeleteResult {
+  deleted: number;
+  failed: number;
+}
+
+/**
+ * Löscht Fotos endgültig: erst die Datei im privaten Bucket, danach der
+ * Verweis am Helfer (photo_path). Der Verweis wird nur für Dateien entfernt, die
+ * tatsächlich gelöscht wurden. Das Löschen ist nur für Admins erlaubt
+ * (Storage-Policy aus Migration 0017).
+ */
+export async function deleteHelperPhotos(
+  items: { id: string; path: string }[],
+  audit?: { entityType: string; entityId: string | null }
+): Promise<PhotoDeleteResult> {
+  let deleted = 0;
+  let failed = 0;
+
+  for (let i = 0; i < items.length; i += 50) {
+    const chunk = items.slice(i, i + 50);
+    const { data, error } = await supabase.storage.from(PHOTO_BUCKET).remove(chunk.map((c) => c.path));
+    if (error) {
+      failed += chunk.length;
+      continue;
+    }
+
+    const removed = new Set((data ?? []).map((f) => f.name));
+    const confirmed = (data ?? []).length === chunk.length ? chunk : chunk.filter((c) => removed.has(c.path));
+    failed += chunk.length - confirmed.length;
+    if (confirmed.length === 0) continue;
+
+    const { error: dbError } = await supabase
+      .from('helpers')
+      .update({ photo_path: null, photo_uploaded_at: null })
+      .in(
+        'id',
+        confirmed.map((c) => c.id)
+      );
+    if (dbError) failed += confirmed.length;
+    else deleted += confirmed.length;
+  }
+
+  if (deleted > 0 && audit) {
+    try {
+      await supabase.rpc('log_audit', {
+        p_action: 'helper_photos_deleted',
+        p_entity_type: audit.entityType,
+        p_entity_id: audit.entityId,
+        p_metadata: { count: deleted },
+      });
+    } catch {
+      /* Protokoll ist Zusatz - das Löschen selbst ist bereits erfolgt */
+    }
+  }
+
+  return { deleted, failed };
+}
+
 /**
  * Erzeugt einen neuen persönlichen Änderungslink für einen Helfer (macht den
  * alten Link ungültig) - für den Fall, dass der ursprüngliche Link verloren
