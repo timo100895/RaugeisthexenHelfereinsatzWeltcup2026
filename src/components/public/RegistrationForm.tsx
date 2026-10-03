@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { EventRow, PublicShiftStatus } from '@/types/database';
 import { formatDateLong, formatTimeRange } from '@/utils/time';
 import { friendlyErrorMessage } from '@/utils/errors';
 import { supabase } from '@/services/supabase';
 import { uploadHelperPhoto } from '@/services/photos';
-import PhotoPicker from './PhotoPicker';
+import PhotoPicker, { type PhotoPickerHandle } from './PhotoPicker';
+import PhotoReminderDialog from './PhotoReminderDialog';
 
 export type PhotoStatus = 'not_requested' | 'uploaded' | 'failed' | 'missing';
 
@@ -35,10 +36,24 @@ export default function RegistrationForm({ shifts, event, onClose, onSuccess }: 
   const [phase, setPhase] = useState<'saving' | 'photo'>('saving');
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<'form' | 'summary'>('form');
+  const pickerRef = useRef<PhotoPickerHandle>(null);
+  // Modus "Empfohlen": zwei Erinnerungen (1: beim Weiter, 2: beim Anmelden), jeweils nur einmal
+  const [reminder, setReminder] = useState<0 | 1 | 2>(0);
+  const [reminded1, setReminded1] = useState(false);
+  const [reminded2, setReminded2] = useState(false);
+  const [openPickerAfterBack, setOpenPickerAfterBack] = useState(false);
 
   const photoMode = event.photo_mode ?? 'off';
   const requireContactData = event.require_contact_data ?? false;
   const photoRequired = photoMode === 'required';
+  const photoRecommended = photoMode === 'recommended';
+
+  useEffect(() => {
+    if (openPickerAfterBack && step === 'form') {
+      pickerRef.current?.openHint();
+      setOpenPickerAfterBack(false);
+    }
+  }, [openPickerAfterBack, step]);
 
   function goToSummary(e: React.FormEvent) {
     e.preventDefault();
@@ -59,7 +74,35 @@ export default function RegistrationForm({ shifts, event, onClose, onSuccess }: 
       setError('Bitte füge ein aktuelles Foto hinzu (Button „Bild hinzufügen“).');
       return;
     }
+    if (photoRecommended && !photo && !reminded1) {
+      setReminded1(true);
+      setReminder(1);
+      return;
+    }
     setStep('summary');
+  }
+
+  // Erinnerung 2: beim Klick auf "Verbindlich anmelden" ohne Foto
+  function requestSubmit() {
+    if (photoRecommended && !photo && !reminded2) {
+      setReminded2(true);
+      setReminder(2);
+      return;
+    }
+    submit();
+  }
+
+  function reminderAddPhoto() {
+    setReminder(0);
+    setStep('form');
+    setOpenPickerAfterBack(true);
+  }
+
+  function reminderContinue() {
+    const current = reminder;
+    setReminder(0);
+    if (current === 1) setStep('summary');
+    else submit();
   }
 
   async function submit() {
@@ -187,12 +230,20 @@ export default function RegistrationForm({ shifts, event, onClose, onSuccess }: 
 
               {photoMode !== 'off' && (
                 <PhotoPicker
+                  ref={pickerRef}
+                  label={photoRecommended ? 'Foto (empfohlen)' : undefined}
                   blob={photo}
                   onChange={setPhoto}
                   required={photoRequired}
                   requireContactData={requireContactData}
                   hint={event.photo_hint ?? null}
                 />
+              )}
+              {photoRecommended && !photo && (
+                <p className="-mt-2 text-xs text-gray-500">
+                  Empfohlen: Für die Akkreditierung wird ein aktuelles Foto benötigt. Du kannst es auch später
+                  nachreichen.
+                </p>
               )}
 
               <label className="flex flex-col gap-1">
@@ -258,7 +309,7 @@ export default function RegistrationForm({ shifts, event, onClose, onSuccess }: 
                 </button>
                 <button
                   type="button"
-                  onClick={submit}
+                  onClick={requestSubmit}
                   disabled={submitting}
                   className="focus-ring flex-1 rounded-xl bg-brand-red py-4 font-bold text-white disabled:opacity-60"
                 >
@@ -273,6 +324,14 @@ export default function RegistrationForm({ shifts, event, onClose, onSuccess }: 
           )}
         </div>
       </div>
+
+      {reminder !== 0 && (
+        <PhotoReminderDialog
+          step={reminder}
+          onAddPhoto={reminderAddPhoto}
+          onContinueWithoutPhoto={reminderContinue}
+        />
+      )}
     </div>
   );
 }

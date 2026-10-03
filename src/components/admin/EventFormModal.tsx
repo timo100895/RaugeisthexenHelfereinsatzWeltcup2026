@@ -221,8 +221,11 @@ export default function EventFormModal({ initial, onClose, onSave }: Props) {
                 onChange={(e) => setPhotoMode(e.target.value as PhotoMode)}
               >
                 <option value="off">Nicht abfragen (Feld wird nicht angezeigt)</option>
-                <option value="optional">Optional (Foto kann hochgeladen werden)</option>
-                <option value="required">Pflicht (Foto wird bei der Anmeldung verlangt)</option>
+                <option value="optional">Optional (Foto kann hochgeladen werden, keine Erinnerung)</option>
+                <option value="recommended">
+                  Empfohlen (zweimal Erinnerung, Anmeldung geht auch ohne Foto)
+                </option>
+                <option value="required">Pflicht (ohne Foto keine Anmeldung)</option>
               </select>
               <span className="text-xs text-gray-500">
                 Das Foto ist öffentlich nicht sichtbar. Du kannst es im Adminbereich unter „Export“

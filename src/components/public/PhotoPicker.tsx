@@ -1,6 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { compressImageToJpeg } from '@/utils/photo';
 import { friendlyErrorMessage } from '@/utils/errors';
+
+/** Erlaubt dem Formular, den Hinweisdialog (und damit die Foto-Auswahl) von außen zu öffnen. */
+export interface PhotoPickerHandle {
+  openHint: () => void;
+}
 
 interface Props {
   blob: Blob | null;
@@ -22,20 +27,17 @@ interface Props {
  * oder Galerie). Das Bild wird sofort verkleinert/als JPEG vorbereitet; die
  * Vorschau sieht nur der Nutzer selbst.
  */
-export default function PhotoPicker({
-  blob,
-  onChange,
-  required,
-  requireContactData,
-  hint,
-  label,
-  disabled,
-}: Props) {
+const PhotoPicker = forwardRef<PhotoPickerHandle, Props>(function PhotoPicker(
+  { blob, onChange, required, requireContactData, hint, label, disabled },
+  ref
+) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showHint, setShowHint] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useImperativeHandle(ref, () => ({ openHint: () => setShowHint(true) }));
 
   useEffect(() => {
     if (!blob) {
@@ -169,4 +171,6 @@ export default function PhotoPicker({
       )}
     </div>
   );
-}
+});
+
+export default PhotoPicker;

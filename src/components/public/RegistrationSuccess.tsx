@@ -84,6 +84,7 @@ export default function RegistrationSuccess({ result, shifts, event }: Props) {
             required={event.photo_mode === 'required'}
             hint={event.photo_hint ?? null}
             hasPhoto={false}
+            recommended={event.photo_mode === 'recommended'}
             onUploaded={() => setPhotoDone(true)}
           />
         </div>

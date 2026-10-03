@@ -8,6 +8,8 @@ interface Props {
   required: boolean;
   hint: string | null;
   hasPhoto: boolean;
+  /** Modus "Empfohlen": Feld als "Foto (empfohlen)" beschriften. */
+  recommended?: boolean;
   onUploaded?: () => void;
 }
 
@@ -16,7 +18,14 @@ interface Props {
  * Liegt bereits ein Foto vor, wird es dem Helfer selbst angezeigt (über eine
  * kurzlebige, signierte URL - für alle anderen bleibt es unsichtbar).
  */
-export default function PhotoStandaloneUpload({ editToken, required, hint, hasPhoto, onUploaded }: Props) {
+export default function PhotoStandaloneUpload({
+  editToken,
+  required,
+  hint,
+  hasPhoto,
+  recommended,
+  onUploaded,
+}: Props) {
   const [blob, setBlob] = useState<Blob | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,7 +92,7 @@ export default function PhotoStandaloneUpload({ editToken, required, hint, hasPh
         required={required && !photoOnFile}
         requireContactData={false}
         hint={hint}
-        label={photoOnFile ? 'Neues Foto' : undefined}
+        label={photoOnFile ? 'Neues Foto' : recommended ? 'Foto (empfohlen)' : undefined}
         disabled={uploading}
       />
 

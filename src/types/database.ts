@@ -3,7 +3,7 @@ export type ShiftStatus = 'open' | 'closed' | 'cancelled';
 export type RegistrationStatus = 'active' | 'cancelled' | 'waitlist';
 export type AdminRole = 'admin' | 'viewer' | 'shift_leader';
 export type LeaderRole = 'leader' | 'support';
-export type PhotoMode = 'off' | 'optional' | 'required';
+export type PhotoMode = 'off' | 'optional' | 'recommended' | 'required';
 
 export interface AppSettings {
   id: 1;

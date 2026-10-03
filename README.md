@@ -375,7 +375,10 @@ Foto abgefragt werden. Einstellbar **pro Veranstaltung** im Adminbereich unter
 *Veranstaltungen → Bearbeiten → „Angaben & Foto bei der Anmeldung“*:
 
 - **Pflichtangaben:** Vorname, Nachname und E-Mail-Adresse müssen angegeben werden
-- **Foto:** *Nicht abfragen* (Feld wird gar nicht angezeigt) / *Optional* / *Pflicht*
+- **Foto:** *Nicht abfragen* (Feld wird gar nicht angezeigt) / *Optional* /
+  *Empfohlen* (zweimal Erinnerung – beim „Weiter“ und beim „Verbindlich anmelden“ –
+  Anmeldung geht aber auch ohne Foto, Nachreichen jederzeit über den persönlichen
+  Link) / *Pflicht* (ohne Foto keine Anmeldung)
 - **Hinweistext:** erscheint, sobald jemand auf „Bild hinzufügen“ klickt
   (Foto-Vorgaben, frei editierbar)
 
@@ -407,7 +410,8 @@ So funktioniert es technisch:
 
 Einmalige Einrichtung (nach dem Deployment): die Migrationen
 `supabase/migrations/0016_accreditation_photos.sql` und
-`supabase/migrations/0017_photo_delete_policy.sql` im Supabase SQL Editor ausführen
+`supabase/migrations/0017_photo_delete_policy.sql` und
+ im Supabase SQL Editor ausführen
 (Einstellungen, Foto-Spalten, privater Bucket, Lösch-Berechtigung für Admins). Die
 Edge Functions werden vom GitHub-Workflow automatisch mit deployt.
 

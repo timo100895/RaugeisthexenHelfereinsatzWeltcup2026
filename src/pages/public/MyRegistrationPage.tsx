@@ -134,6 +134,7 @@ export default function MyRegistrationPage() {
   const photoRegs = activeRegs.filter((r) => r.event_photo_mode && r.event_photo_mode !== 'off');
   const showPhotoSection = photoRegs.length > 0;
   const photoRequired = photoRegs.some((r) => r.event_photo_mode === 'required');
+  const photoRecommended = photoRegs.some((r) => r.event_photo_mode === 'recommended');
   const photoHint = photoRegs.find((r) => r.event_photo_hint)?.event_photo_hint ?? null;
 
   return (
@@ -256,6 +257,7 @@ export default function MyRegistrationPage() {
               required={photoRequired}
               hint={photoHint}
               hasPhoto={Boolean(data.has_photo)}
+              recommended={photoRecommended}
               onUploaded={load}
             />
           </section>
